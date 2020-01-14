@@ -2,12 +2,15 @@ import gym_moving_dot
 import gym
 import numpy as np
 from skimage.transform import resize
+from logger import LOG
 
 from agent import Agent
 
 ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
-MAX_EPISODES = 1000
+MAX_EPISODES = 10
+
+episode_log = LOG()
 
 
 def rgb2gray(img):
@@ -44,7 +47,10 @@ if __name__ == '__main__':
         stacked_frames = stack_frames(stacked_frames, s, True)
         episode_reward = 0
         episode_loss = 0
-        for step in range(1, 1000 + 1):
+
+        episode_log.on()
+
+        for step in range(1, 500 + 1):
             # env.render()
 
             stacked_frames_copy = stacked_frames.copy()
@@ -52,12 +58,14 @@ if __name__ == '__main__':
             s_, r, d, _ = env.step(action)
             stacked_frames = stack_frames(stacked_frames, s_, False)
             agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-            env.render()
-            # if d:
-            #     break
+            # env.render()
+            if d:
+                break
 
             loss = agent.train()
             episode_reward += r
             episode_loss += loss
-            print(step)
-        print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')
+
+        episode_log.off()
+        episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
+        # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')

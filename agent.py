@@ -57,7 +57,7 @@ class Agent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.eval_model = DQN("eval_model", self.state_shape, self.n_actions).to(self.device)
         self.target_model = DQN("target_model", self.state_shape, self.n_actions).to(self.device)
-        self.loss_fn = nn.MSELoss().to(self.device)
+        self.loss_fn = nn.MSELoss()
 
         # self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()
@@ -72,10 +72,10 @@ class Agent:
         self.steps = 0
 
     def choose_action(self, state):
-        eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-                        np.exp(-1. * self.steps / self.epsilon_decay)
+        self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
+                             np.exp(-1. * self.steps / self.epsilon_decay)
 
-        if np.random.random() > eps_threshold:
+        if np.random.random() > self.eps_threshold:
             with torch.no_grad():
                 state = torch.unsqueeze(from_numpy(state).float().to(self.device), dim=0)
                 action = self.eval_model(
@@ -89,12 +89,12 @@ class Agent:
 
     def store(self, state, action, reward, next_state, done):
 
-        state = from_numpy(state).float().to(self.device)
-        reward = torch.Tensor([reward], device="cpu")
-        next_state = from_numpy(next_state).float().to(self.device)
-        done = torch.Tensor([done], device="cpu")
-
-        self.memory.push(state, action.to("cpu"), reward.to("cpu"), next_state, done.to("cpu"))
+        state = from_numpy(state).float().to('cpu')
+        reward = torch.Tensor([reward])
+        action = torch.unsqueeze(action, dim=0)
+        next_state = from_numpy(next_state).float().to('cpu')
+        done = torch.Tensor([done])
+        self.memory.push(state, action.to('cpu'), reward, next_state, done)
 
     @staticmethod
     def soft_update_of_target_network(local_model, target_model, tau):
@@ -105,20 +105,15 @@ class Agent:
 
         batch = Transition(*zip(*batch))
 
-        actions = tuple((map(lambda a: torch.tensor([[a]], device=self.device), batch.action)))
-        rewards = tuple((map(lambda r: torch.tensor([r], device=self.device), batch.reward)))
-
-        states = torch.cat(batch.state).to(self.device).view(512, 84, 84, 4)
-        actions = torch.cat(actions).to(self.device)
-        rewards = torch.cat(rewards).to(self.device)
-        next_states = torch.cat(batch.next_state).view(512, 84, 84, 4)
-        dones = torch.cat(batch.done)
-
+        states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.state_shape)
+        actions = torch.cat(batch.action).to(self.device)
+        rewards = torch.cat(batch.reward).to(self.device)
+        next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.state_shape)
+        dones = torch.cat(batch.done).to(self.device)
+        # print("states shape:",states.shape)
         states = states.permute(dims=[0, 3, 2, 1])
-        actions = actions.to(self.device).view((-1, 1))
-        rewards = rewards.to(self.device)
+        actions = actions.view((-1, 1))
         next_states = next_states.permute(dims=[0, 3, 2, 1])
-        dones = dones.to(self.device)
         return states, actions, rewards, next_states, dones
 
     def train(self):
