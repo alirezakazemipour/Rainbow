@@ -14,6 +14,7 @@ dist/
 downloads/
 eggs/
 .idea/
+logs/
 .eggs/
 lib/
 lib64/
