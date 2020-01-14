@@ -1,6 +1,8 @@
 import time
 import numpy as np
 import psutil
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 moving_avg = False
 
@@ -9,8 +11,12 @@ global_running_l = []
 
 
 class LOG:
+    simulation_steps = 0
+
     def __init__(self):
         self.moving_avg_window = 5
+        log_dir = datetime.datetime.now().strftime("%y-%m-%d-%H-%M-%S")
+        self.writer = SummaryWriter("./logs/" + log_dir)
 
     def on(self):
         self.start_time = time.time()
@@ -66,3 +72,5 @@ class LOG:
                                             to_gb(memory.used),
                                             to_gb(memory.total)
                                             ))
+        self.writer.add_scalar("Loss", loss, self.simulation_steps)
+        self.writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)

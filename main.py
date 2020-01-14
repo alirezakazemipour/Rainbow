@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
         episode_log.on()
 
-        for step in range(1, 500 + 1):
+        for step in range(1, 200 + 1):
             # env.render()
 
             stacked_frames_copy = stacked_frames.copy()

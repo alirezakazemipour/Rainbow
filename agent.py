@@ -2,6 +2,7 @@ from torch import nn, from_numpy
 import torch
 import torch.nn.functional as F
 from torch.optim.rmsprop import RMSprop
+import logger
 
 import numpy as np
 
@@ -84,6 +85,8 @@ class Agent:
         else:
             action = torch.randint(low=0, high=self.n_actions, size=(1,), device=self.device)[0]
         self.steps += 1
+        logger.LOG.simulation_steps += 1
+
 
         return action
 
