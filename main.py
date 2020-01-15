@@ -9,6 +9,8 @@ from agent import Agent
 ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
 MAX_EPISODES = 10
+save_interval = 50
+log_interval = 2
 
 episode_log = LOG()
 
@@ -65,7 +67,10 @@ if __name__ == '__main__':
             loss = agent.train()
             episode_reward += r
             episode_loss += loss
+            if step % save_interval == 0:
+                episode_log.save_weights(agent.eval_model, agent.optimizer)
 
         episode_log.off()
-        episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
+        if episode % log_interval == 0:
+            episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')

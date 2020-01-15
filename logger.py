@@ -3,6 +3,8 @@ import numpy as np
 import psutil
 from torch.utils.tensorboard import SummaryWriter
 import datetime
+import torch
+import os
 
 moving_avg = False
 
@@ -15,14 +17,28 @@ episodes_rewards = []
 class LOG:
     simulation_steps = 0
 
+    # episode = 0
+    # steps = 0
+
     def __init__(self):
         self.moving_avg_window = 5
-        log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        self.writer = SummaryWriter("./logs/" + log_dir)
+        self.dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.create_dir(self.dir)
+        self.writer = SummaryWriter("./logs/" + self.dir)
         self.min_episode_reward = np.inf
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
         self.avg_steps_reward = 0
+
+        self.episode = 0
+        self.steps = 0
+
+        self.save_interval = 10
+    @staticmethod
+    def create_dir(dir):
+        dir = os.path.join("./models/" + dir)
+        if not os.path.exists(dir):
+            os.mkdir(dir)
 
     def on(self):
         self.start_time = time.time()
@@ -32,14 +48,14 @@ class LOG:
 
     def printer(self, *args, **kwargs):
 
-        episode, episode_reward, loss, eps_threshold, steps = args
+        self.episode, episode_reward, loss, eps_threshold, self.steps = args
         episodes_rewards.append(episode_reward)
 
         self.min_episode_reward = min(self.min_episode_reward, episode_reward)
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
-        self.avg_episode_reward = sum(episodes_rewards) / episode
+        self.avg_episode_reward = sum(episodes_rewards) / self.episode
 
-        self.avg_steps_reward = episode_reward / steps
+        self.avg_steps_reward = episode_reward / self.steps
 
         if len(global_running_r) == 0:
             global_running_r.append(episode_reward)
@@ -104,8 +120,17 @@ class LOG:
                                             self.duration,
                                             loss,  # TODO make loss smooth
                                             eps_threshold,
-                                            steps,  # it should be in each step not in each episode
-                                            self.duration / steps,
+                                            self.steps,  # it should be in each step not in each episode
+                                            self.duration / self.steps,
                                             to_gb(memory.used),
                                             to_gb(memory.total)
                                             ))
+
+    def save_weights(self, model, optimizer):
+        torch.save({"model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "episode": self.episode,
+                    "step": self.steps},
+                   "./models/" + self.dir + "/" "episode" + str(self.episode) + "-" + "step" + str(self.steps))
+    # TODO
+    # implement loading for training & playing

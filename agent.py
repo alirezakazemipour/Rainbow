@@ -2,7 +2,7 @@ from torch import nn, from_numpy
 import torch
 import torch.nn.functional as F
 from torch.optim.rmsprop import RMSprop
-import logger
+from logger import LOG
 
 import numpy as np
 
@@ -10,6 +10,8 @@ from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
+
+TRAIN_FROM_SCRATCH = True
 
 
 class DQN(nn.Module):
@@ -56,12 +58,19 @@ class Agent:
         self.batch_size = batch_size
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.eval_model = DQN("eval_model", self.state_shape, self.n_actions).to(self.device)
         self.target_model = DQN("target_model", self.state_shape, self.n_actions).to(self.device)
+
+        if not TRAIN_FROM_SCRATCH:
+            #TODO
+            # Load weights and other params
+            pass
+
         self.loss_fn = nn.MSELoss()
 
         # self.target_model.load_state_dict(self.eval_model.state_dict())
-        self.target_model.eval()
+        self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
         self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
         self.memory = ReplayMemory(capacity)
 
@@ -85,8 +94,7 @@ class Agent:
         else:
             action = torch.randint(low=0, high=self.n_actions, size=(1,), device=self.device)[0]
         self.steps += 1
-        logger.LOG.simulation_steps += 1
-
+        LOG.simulation_steps += 1
 
         return action
 
@@ -136,3 +144,4 @@ class Agent:
         self.optimizer.step()
         var = loss.detach().cpu().numpy()
         return var
+
