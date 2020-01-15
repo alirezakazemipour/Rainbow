@@ -63,7 +63,7 @@ class Agent:
         self.target_model = DQN("target_model", self.state_shape, self.n_actions).to(self.device)
 
         if not TRAIN_FROM_SCRATCH:
-            #TODO
+            # TODO
             # Load weights and other params
             pass
 
@@ -97,6 +97,9 @@ class Agent:
         LOG.simulation_steps += 1
 
         return action
+
+    def get_action(self, state):
+        return self.eval_model(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
 
     def store(self, state, action, reward, next_state, done):
 
