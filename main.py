@@ -10,10 +10,13 @@ from agent import Agent
 ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
 MAX_EPISODES = 10
+MAX_STEPS = 1000
 save_interval = 200
 log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
 
 episode_log = LOG()
+
+TRAIN = True
 
 
 def rgb2gray(img):
@@ -42,40 +45,44 @@ if __name__ == '__main__':
     env = gym.make(ENV_NAME)
     n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions, 0.99, 0.005, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
-                  epsilon_decay=200, batch_size=512)
+    agent = Agent(n_actions, 0.99, 0.0005, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
+                  epsilon_decay=200, batch_size=64)
+    if TRAIN:
 
-    for episode in range(1, MAX_EPISODES + 1):
-        s = env.reset()
-        stacked_frames = stack_frames(stacked_frames, s, True)
-        episode_reward = 0
-        episode_loss = 0
+        for episode in range(1, MAX_EPISODES + 1):
+            s = env.reset()
+            stacked_frames = stack_frames(stacked_frames, s, True)
+            episode_reward = 0
+            episode_loss = 0
 
-        episode_log.on()
+            episode_log.on()
 
-        for step in range(1, 1000 + 1):
+            for step in range(1, MAX_STEPS + 1):
 
-            stacked_frames_copy = stacked_frames.copy()
-            action = agent.choose_action(stacked_frames_copy)
-            s_, r, d, _ = env.step(action)
-            stacked_frames = stack_frames(stacked_frames, s_, False)
-            agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-            # env.render()
-            loss = agent.train()
-            episode_reward += r
-            episode_loss += loss
-            if step % save_interval == 0:
-                episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
+                stacked_frames_copy = stacked_frames.copy()
+                action = agent.choose_action(stacked_frames_copy)
+                s_, r, d, _ = env.step(action)
+                stacked_frames = stack_frames(stacked_frames, s_, False)
+                agent.store(stacked_frames_copy, action, r, stacked_frames, d)
+                # env.render()
+                loss = agent.train()
+                episode_reward += r
+                episode_loss += loss
+                if step % save_interval == 0:
+                    episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
 
-            if d:
-                break
+                if d:
+                    break
 
-        episode_log.off()
-        if episode % log_interval == 0:
-            episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
-        # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')
-    # region play
-    play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-    player = Play(agent, env, play_path)
-    player.evaluate()
-    # endregion
+            episode_log.off()
+            if episode % log_interval == 0:
+                episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
+            # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')
+    else:
+        episode = MAX_EPISODES
+        step = MAX_STEPS
+        # region play
+        play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
+        player = Play(agent, env, play_path)
+        player.evaluate()
+        # endregion

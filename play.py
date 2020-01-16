@@ -34,7 +34,7 @@ class Play:
     def evaluate(self):
 
         print("--------Play mode--------")
-        for _ in range(3):
+        for _ in range(5):
             done = 0
             state = self.env.reset()
             total_reward = 0
