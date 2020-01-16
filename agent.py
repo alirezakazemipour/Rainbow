@@ -2,6 +2,7 @@ from torch import nn, from_numpy
 import torch
 import torch.nn.functional as F
 from torch.optim.rmsprop import RMSprop
+from torch.optim.adam import Adam
 from logger import LOG
 
 import numpy as np
@@ -10,6 +11,7 @@ from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
+torch.cuda.empty_cache()
 
 TRAIN_FROM_SCRATCH = True
 
@@ -71,7 +73,8 @@ class Agent:
 
         # self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
-        self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
+        # self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
+        self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
         self.memory = ReplayMemory(capacity)
 
         self.epsilon_start = epsilon_start
@@ -99,9 +102,12 @@ class Agent:
         return action
 
     def get_action(self, state):
+        state = from_numpy(state).float().to(self.device)
+        state = torch.unsqueeze(state, dim=0)
         return self.eval_model(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
 
     def store(self, state, action, reward, next_state, done):
+        """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
 
         state = from_numpy(state).float().to('cpu')
         reward = torch.Tensor([reward])
@@ -111,7 +117,7 @@ class Agent:
         self.memory.push(state, action.to('cpu'), reward, next_state, done)
 
     @staticmethod
-    def soft_update_of_target_network(local_model, target_model, tau):
+    def soft_update_of_target_network(local_model, target_model, tau=0.001):
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
 
@@ -124,7 +130,6 @@ class Agent:
         rewards = torch.cat(batch.reward).to(self.device)
         next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.state_shape)
         dones = torch.cat(batch.done).to(self.device)
-        # print("states shape:",states.shape)
         states = states.permute(dims=[0, 3, 2, 1])
         actions = actions.view((-1, 1))
         next_states = next_states.permute(dims=[0, 3, 2, 1])
@@ -144,7 +149,14 @@ class Agent:
 
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)  # clip gradients to help stabilise training
         self.optimizer.step()
         var = loss.detach().cpu().numpy()
+        self.soft_update_of_target_network(self.eval_model, self.target_model)
+
         return var
 
+    def ready_to_play(self, path):
+        model_state_dict, _ = LOG.load_weights(path)
+        self.eval_model.load_state_dict(model_state_dict)
+        self.eval_model.eval()

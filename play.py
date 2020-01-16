@@ -4,15 +4,16 @@ from skimage.transform import resize
 
 
 class Play:
-    def __init__(self, agent, env):
+    def __init__(self, agent, env, path):
         torch.cuda.empty_cache()
         self.agent = agent
-        self.agent.load_weights()  # TODO
+        self.path = path
+        self.agent.ready_to_play(self.path)
         self.env = env
         self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
 
     @staticmethod
-    def rgb2gray(self, img):
+    def rgb2gray(img):
         return 0.2125 * img[..., 0] + 0.7154 * img[..., 1] + 0.0721 * img[..., 2]
 
     def preprocessing(self, img):
@@ -32,6 +33,7 @@ class Play:
 
     def evaluate(self):
 
+        print("--------Play mode--------")
         for _ in range(3):
             done = 0
             state = self.env.reset()
