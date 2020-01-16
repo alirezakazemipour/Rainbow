@@ -73,8 +73,8 @@ class Agent:
 
         # self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
-        # self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
-        self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
+        self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
+        # self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
         self.memory = ReplayMemory(capacity)
 
         self.epsilon_start = epsilon_start

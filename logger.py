@@ -24,7 +24,7 @@ class LOG:
         self.moving_avg_window = 5
         self.dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.create_dir(self.dir)
-        self.writer = SummaryWriter("./logs/" + self.dir)
+        # self.writer = SummaryWriter("./logs/" + self.dir)
         self.min_episode_reward = np.inf
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
@@ -83,13 +83,13 @@ class LOG:
 
         print("Episode:{:3d}| "
               "Episode_Reward:{:3d}| "
-              "Episode_Running_r:{:2.3f}| "
-              "Episode_Running_l:{:2.3f}| "
-              "Episode Duration:{:2.3f}| "
-              "Episode loss:{:2.3f}| "
-              "eps_threshold:{:0.3f}| "
+              "Episode_Running_r:{:3.3f}| "
+              "Episode_Running_l:{:3.3f}| "
+              "Episode Duration:{:3.3f}| "
+              "Episode loss:{:3.3f}| "
+              "eps_threshold:{:3.3f}| "
               "step:{:3d}| "
-              "mean steps time:{:0.3f}| "
+              "mean steps time:{:3.3f}| "
               "{:.1f}/{:.1f} GB RAM".format(self.episode,
                                             episode_reward,
                                             global_running_r[-1],
@@ -102,8 +102,12 @@ class LOG:
                                             to_gb(memory.used),
                                             to_gb(memory.total)
                                             ))
-        self.writer.add_scalar("Loss", loss, self.simulation_steps)
-        self.writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
+        with SummaryWriter("./logs/" + self.dir) as writer:
+            writer.add_scalar("Loss", loss, self.simulation_steps)
+            writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
+            writer.add_hparams({
+                "lr": 0.005},
+                {"hparam/loss": loss})
 
         # print("Min episode reward:{:3d}| "
         #       "Max episode reward:{:3d}| "
