@@ -21,32 +21,56 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         self.name = name
         width, height, channel = state_shape
-        self.conv1 = nn.Conv2d(channel, 16, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2)
+        self.conv1 = nn.Conv2d(channel, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
 
         def conv2d_size_out(size, kernel_size=5, stride=2):
             return (size - kernel_size) // stride + 1
 
         convw = conv2d_size_out(conv2d_size_out(width, kernel_size=8, stride=4), kernel_size=4, stride=2)
         convh = conv2d_size_out(conv2d_size_out(height, kernel_size=8, stride=4), kernel_size=4, stride=2)
-        linear_input_size = convw * convh * 32
-        self.fc1 = nn.Linear(linear_input_size, 256)
-        self.output = nn.Linear(256, n_actions)
+
+        convw = conv2d_size_out(convw, kernel_size=3, stride=1)
+        convh = conv2d_size_out(convh, kernel_size=3, stride=1)
+
+        linear_input_size = convw * convh * 64
+
+        self.adv_fc = nn.Linear(linear_input_size, 512)
+        nn.init.kaiming_normal_(self.adv_fc.weight)
+        self.adv_fc.bias.detach().zero_()
+        self.v_fc = nn.Linear(linear_input_size, 512)
+        nn.init.kaiming_normal_(self.v_fc.weight)
+        self.v_fc.bias.detach().zero_()
+
+        self.adv_value = nn.Linear(512, n_actions)
+        nn.init.xavier_normal_(self.adv_value.weight)
+        self.adv_value.bias.detach().zero_()
+        self.s_value = nn.Linear(512, 1)
+        nn.init.xavier_normal_(self.s_value.weight)
+        self.s_value.bias.detach().zero_()
 
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight.detach())
                 m.bias.detach().zero_()
-            elif isinstance(m, torch.nn.Linear):
-                nn.init.kaiming_normal_(m.weight.detach())
-                m.bias.detach().zero_()
+            # elif isinstance(m, torch.nn.Linear):
+            #     nn.init.kaiming_normal_(m.weight.detach())
+            #     m.bias.detach().zero_()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        return self.output(x)
+        adv_fc = F.relu(self.adv_fc(x))
+        v_fc = F.relu(self.v_fc(x))
+        adv_value = self.adv_value(adv_fc)
+        s_value = self.s_value(v_fc)
+
+        x = s_value + adv_value - adv_value.mean(1, keepdim=True)
+
+        return x
 
 
 class Agent:
@@ -58,6 +82,7 @@ class Agent:
         self.lr = lr
         self.state_shape = state_shape
         self.batch_size = batch_size
+        self.update_count = 0
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -72,8 +97,8 @@ class Agent:
         self.loss_fn = nn.MSELoss()
         # self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
-        # self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
-        self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
+        self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
+        # self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
         self.memory = ReplayMemory(capacity)
 
         self.epsilon_start = epsilon_start
@@ -120,6 +145,11 @@ class Agent:
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
 
+    def hard_update_of_target_network(self, to_model=None, from_model=None):
+        self.target_model.load_state_dict(self.eval_model.state_dict())
+        # for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
+        #     to_model.data.copy_(from_model.data.clone())
+
     def unpack_batch(self, batch):
 
         batch = Transition(*zip(*batch))
@@ -145,7 +175,7 @@ class Agent:
         with torch.no_grad():
             q_next = self.target_model(next_states).detach()
 
-            q_eval_next = self.eval_model(next_states)
+            q_eval_next = self.eval_model(next_states).detach()
             max_action = torch.argmax(q_eval_next, dim=-1)
 
             batch_indices = torch.arange(end=self.batch_size, dtype=torch.int32)
@@ -162,8 +192,11 @@ class Agent:
         #     param.grad.data.clamp_(-1, 1)
 
         self.optimizer.step()
+        self.update_count +=1
         var = loss.detach().cpu().numpy()
-        self.soft_update_of_target_network(self.eval_model, self.target_model)
+        # self.soft_update_of_target_network(self.eval_model, self.target_model)
+        if self.update_count % 10000 == 0:
+            self.hard_update_of_target_network()
 
         return var
 

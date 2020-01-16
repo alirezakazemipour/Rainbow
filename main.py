@@ -9,7 +9,7 @@ from agent import Agent
 
 ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
-MAX_EPISODES = 10
+MAX_EPISODES = 20
 MAX_STEPS = 1000
 save_interval = 200
 log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
@@ -45,8 +45,8 @@ if __name__ == '__main__':
     env = gym.make(ENV_NAME)
     n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions, 0.99, 0.0005, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
-                  epsilon_decay=200, batch_size=64)
+    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
+                  epsilon_decay=200, batch_size=32)
     if TRAIN:
 
         for episode in range(1, MAX_EPISODES + 1):
@@ -63,11 +63,16 @@ if __name__ == '__main__':
                 action = agent.choose_action(stacked_frames_copy)
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
+                r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
-                loss = agent.train()
+                if step % 4 == 0:
+                    loss = agent.train()
+                    episode_loss += loss
+                else:
+                    episode_loss += 0
                 episode_reward += r
-                episode_loss += loss
+
                 if step % save_interval == 0:
                     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
 
