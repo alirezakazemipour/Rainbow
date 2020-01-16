@@ -144,7 +144,14 @@ class Agent:
         x = states
         q_eval = self.eval_model(x).gather(dim=1, index=actions)
         q_next = self.target_model(next_states).detach()
-        q_target = rewards + self.gamma * q_next.max(dim=1)[0]
+
+        q_eval_next = self.eval_model(next_states)
+        max_action = torch.argmax(q_eval_next, dim=1)[0]
+
+        batch_indices = torch.arange(end=self.batch_size, dtype=torch.int32)
+        target_value = q_next[batch_indices.long(), max_action.long()] * (1 - dones)
+
+        q_target = rewards + self.gamma * target_value
         loss = self.loss_fn(q_eval, q_target.view((self.batch_size, 1)))
 
         self.optimizer.zero_grad()
