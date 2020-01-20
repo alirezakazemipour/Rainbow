@@ -147,6 +147,7 @@ class Agent:
 
     def hard_update_of_target_network(self, to_model=None, from_model=None):
         self.target_model.load_state_dict(self.eval_model.state_dict())
+        self.target_model.eval()
         # for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
         #     to_model.data.copy_(from_model.data.clone())
 
@@ -194,9 +195,9 @@ class Agent:
         self.optimizer.step()
         self.update_count +=1
         var = loss.detach().cpu().numpy()
-        # self.soft_update_of_target_network(self.eval_model, self.target_model)
-        if self.update_count % 10000 == 0:
-            self.hard_update_of_target_network()
+        self.soft_update_of_target_network(self.eval_model, self.target_model)
+        # if self.update_count % 10000 == 0:
+        #     self.hard_update_of_target_network()
 
         return var
 

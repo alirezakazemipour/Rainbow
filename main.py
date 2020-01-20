@@ -7,8 +7,9 @@ from play import Play
 
 from agent import Agent
 
-ENV_NAME = "MovingDotDiscrete-v0"
+# ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
+ENV_NAME = "Breakout-v0"
 MAX_EPISODES = 20
 MAX_STEPS = 1000
 save_interval = 200
@@ -73,8 +74,8 @@ if __name__ == '__main__':
                     episode_loss += 0
                 episode_reward += r
 
-                if step % save_interval == 0:
-                    episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
+                # if step % save_interval == 0:
+                #     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
 
                 if d:
                     break
