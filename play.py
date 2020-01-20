@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from skimage.transform import resize
+import gym
 
 
 class Play:
@@ -10,6 +11,7 @@ class Play:
         self.path = path
         self.agent.ready_to_play(self.path)
         self.env = env
+        self.env = gym.wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
         self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
 
     @staticmethod
@@ -34,7 +36,7 @@ class Play:
     def evaluate(self):
 
         print("--------Play mode--------")
-        for _ in range(5):
+        for _ in range(10):
             done = 0
             state = self.env.reset()
             total_reward = 0
