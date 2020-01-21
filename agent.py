@@ -59,6 +59,7 @@ class Agent:
         self.state_shape = state_shape
         self.batch_size = batch_size
 
+        torch.cuda.empty_cache()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.eval_model = DQN("eval_model", self.state_shape, self.n_actions).to(self.device)
@@ -103,7 +104,7 @@ class Agent:
     def get_action(self, state):
         state = from_numpy(state).float().to(self.device)
         state = torch.unsqueeze(state, dim=0)
-        return self.eval_model(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
+        return self.eval_model(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0].item()
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """

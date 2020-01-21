@@ -2,17 +2,22 @@ import torch
 import numpy as np
 from skimage.transform import resize
 import gym
-
+import time
+import psutil
 
 class Play:
     def __init__(self, agent, env, path):
         torch.cuda.empty_cache()
+        time.sleep(30)
         self.agent = agent
         self.path = path
         self.agent.ready_to_play(self.path)
         self.env = env
-        self.env = gym.wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
+        # self.env = gym.wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
         self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
+
+        self.memory = psutil.virtual_memory()
+        self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
     @staticmethod
     def rgb2gray(img):
@@ -36,16 +41,18 @@ class Play:
     def evaluate(self):
 
         print("--------Play mode--------")
-        for _ in range(10):
-            done = 0
+        for _ in range(1):
+            done = False
             state = self.env.reset()
             total_reward = 0
             self.stacked_frames = self.stack_frames(self.stacked_frames, state, True)
+            i = 0
 
-            while not done:
+            while not done and i<300:
+                i += 1
                 stacked_frames_copy = self.stacked_frames.copy()
                 action = self.agent.get_action(stacked_frames_copy)
-                next_state, r, done, _ = self.env.step(action)
+                next_state, r, done, info = self.env.step(action)
                 self.stacked_frames = self.stack_frames(self.stacked_frames, next_state, False)
                 self.env.render()
                 total_reward += r

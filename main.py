@@ -12,7 +12,7 @@ from agent import Agent
 ENV_NAME = "Breakout-v0"
 test_env= gym.make(ENV_NAME)
 
-MAX_EPISODES = 5
+MAX_EPISODES = 3000
 MAX_STEPS = test_env._max_episode_steps
 save_interval = 200
 log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
@@ -48,8 +48,8 @@ if __name__ == '__main__':
     env = gym.make(ENV_NAME)
     n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
-                  epsilon_decay=200, batch_size=32)
+    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 100000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
+                  epsilon_decay=500, batch_size=32)
     if TRAIN:
 
         for episode in range(1, MAX_EPISODES + 1):
@@ -72,8 +72,8 @@ if __name__ == '__main__':
                     loss = agent.train()
                     episode_loss += loss
                 episode_reward += r
-                if step % save_interval == 0:
-                    episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
+                # if step % save_interval == 0:
+                #     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
 
                 if d:
                     break
@@ -81,7 +81,6 @@ if __name__ == '__main__':
             episode_log.off()
             if episode % log_interval == 0:
                 episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
-            # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')
         episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
     # else:
@@ -92,3 +91,12 @@ if __name__ == '__main__':
     player = Play(agent, env, play_path)
     player.evaluate()
     # endregion
+
+
+# for _ in range(100):
+#     test_env.reset()
+#     done = False
+#     while not done:
+#         a =test_env.action_space.sample()
+#         _, _, done, _ = test_env.step(a)
+#         test_env.render()
