@@ -10,16 +10,16 @@ from agent import Agent
 # ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
 ENV_NAME = "Breakout-v0"
-test_env= gym.make(ENV_NAME)
+test_env = gym.make(ENV_NAME)
 
-MAX_EPISODES = 3000
+MAX_EPISODES = 500
 MAX_STEPS = test_env._max_episode_steps
 save_interval = 200
-log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
+log_interval = 5  # TODO has conflicts with save interval when loading for playing is needed
 
 episode_log = LOG()
 
-TRAIN = True
+TRAIN = False
 
 
 def rgb2gray(img):
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     env = gym.make(ENV_NAME)
     n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 100000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
+    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
                   epsilon_decay=500, batch_size=32)
     if TRAIN:
 
@@ -83,20 +83,22 @@ if __name__ == '__main__':
                 episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
-    # else:
-    episode = MAX_EPISODES
-    # step = MAX_STEPS
-    # region play
-    play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-    player = Play(agent, env, play_path)
-    player.evaluate()
-    # endregion
-
+    else:
+        episode = MAX_EPISODES
+        # step = MAX_STEPS
+        # region play
+        # play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
+        play_path = "/home/alireza/Desktop/models-20200121T073005Z-001/models/2020-01-21-04-52-55/episode3000-step424"
+        player = Play(agent, env, play_path)
+        player.evaluate()
+        # endregion
 
 # for _ in range(100):
 #     test_env.reset()
 #     done = False
 #     while not done:
 #         a =test_env.action_space.sample()
-#         _, _, done, _ = test_env.step(a)
+#         _, r, done, _ = test_env.step(a)
+#         print(r)
 #         test_env.render()
+#         x = input()
