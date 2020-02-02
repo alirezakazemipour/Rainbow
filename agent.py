@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.optim.rmsprop import RMSprop
 from torch.optim.adam import Adam
 from logger import LOG
-
+from torchsummary import summary
 import numpy as np
 
 from replay_memory import ReplayMemory, Transition
@@ -104,8 +104,6 @@ class ResNetLayer(nn.Module):
         return F.relu(x + inputs)
 
 
-
-
 class Agent:
     def __init__(self, n_actions, gamma, tau, lr, state_shape, capacity, alpha, epsilon_start, epsilon_end,
                  epsilon_decay, batch_size):
@@ -120,7 +118,10 @@ class Agent:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.eval_model = DQN(name="eval_model", state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
-        self.target_model = DQN(name="target_model", state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
+        self.target_model = DQN(name="target_model", state_shape=self.state_shape, n_actions=self.n_actions).to(
+            self.device)
+        w, h, c = state_shape
+        summary(self.eval_model, input_size=(c, w, h))
 
         if not TRAIN_FROM_SCRATCH:
             # TODO
