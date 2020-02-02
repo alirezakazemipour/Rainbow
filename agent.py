@@ -16,37 +16,94 @@ torch.cuda.empty_cache()
 TRAIN_FROM_SCRATCH = True
 
 
+def get_conv_out(n, stride, kernel_size, padding=0):
+    return (n + 2 * padding - kernel_size) // stride + 1
+
+
+def initial_weights(module, linear_initialization=False):
+    """
+    check out https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py#L118
+    """
+    for m in module:
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight.data, mode='fan_out', nonlinearity='relu')
+            # we can set bias to zero but as reference resnet initialization did, let it be as it is(default)
+        elif isinstance(m, nn.BatchNorm2d):
+            nn.init.constant_(m.weight, 1)
+            nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.Linear) and linear_initialization:
+            # it's better we don't initialize linear layers because our
+            # linear layer has no activation function and it would be ok to go with default(not atari)
+            nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
+
+
 class DQN(nn.Module):
-    def __init__(self, name, state_shape, n_actions):
+    def __init__(self, n_actions, state_shape, name=''):
         super(DQN, self).__init__()
-        self.name = name
-        width, height, channel = state_shape
-        self.conv1 = nn.Conv2d(channel, 16, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2)
+        self.model_name = name
+        self.n_actions = n_actions
+        width, height, channels = state_shape
 
-        def conv2d_size_out(size, kernel_size=5, stride=2):
-            return (size - kernel_size) // stride + 1
+        self.conv1 = nn.Conv2d(channels, 16, kernel_size=3, padding=1)
+        self.resnet1 = ResNetLayer(16, filters=16, name="resnet1")
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
+        self.resnet2 = ResNetLayer(32, 32, name="resnet2")
 
-        convw = conv2d_size_out(conv2d_size_out(width, kernel_size=8, stride=4), kernel_size=4, stride=2)
-        convh = conv2d_size_out(conv2d_size_out(height, kernel_size=8, stride=4), kernel_size=4, stride=2)
-        linear_input_size = convw * convh * 32
-        self.fc1 = nn.Linear(linear_input_size, 256)
-        self.output = nn.Linear(256, n_actions)
+        convw = get_conv_out(width, kernel_size=2, padding=0, stride=2)  # Max pooling kernel_size and stride
+        convh = get_conv_out(height, kernel_size=2, padding=0, stride=2)  # Max pooling kernel_size and stride
 
-        for m in self.modules():
-            if isinstance(m, torch.nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight.detach())
-                m.bias.detach().zero_()
-            elif isinstance(m, torch.nn.Linear):
-                nn.init.kaiming_normal_(m.weight.detach())
-                m.bias.detach().zero_()
+        self.fc = nn.Linear(convw * convh * 32, 512)
+        nn.init.kaiming_normal_(self.fc.weight)
+        self.fc.bias.data.zero_()
+        self.s_a_value = nn.Linear(512, self.n_actions)
+
+        initial_weights(self.modules())
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
+        x = self.resnet1(x)
         x = F.relu(self.conv2(x))
+        x = self.resnet2(x)
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        return self.output(x)
+        x = F.relu(self.fc(x))
+        x = self.s_a_value(x)
+
+        return x
+
+
+class ResNetLayer(nn.Module):
+    def __init__(self, in_channels, filters, name, strides=1, kernel_size=3):
+        super(ResNetLayer, self).__init__()
+
+        self.filters = filters
+        self.in_channels = in_channels
+        self.layer_name = name
+        self.strides = strides
+        self.kernel_size = kernel_size
+
+        self.conv1 = nn.Conv2d(in_channels=self.in_channels,
+                               out_channels=self.filters,
+                               kernel_size=self.kernel_size,
+                               stride=self.strides,
+                               padding=1)
+
+        self.batch_norm = nn.BatchNorm2d(self.filters)
+
+        self.conv2 = nn.Conv2d(in_channels=self.filters,
+                               out_channels=self.filters,
+                               kernel_size=self.kernel_size,
+                               stride=self.strides,
+                               padding=1)
+        initial_weights(self.modules())
+
+    def forward(self, x):
+        inputs = x
+        x = F.relu(self.conv1(x))
+        x = self.batch_norm(x)
+        x = self.conv2(x)
+        return F.relu(x + inputs)
+
+
 
 
 class Agent:
@@ -62,8 +119,8 @@ class Agent:
         torch.cuda.empty_cache()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.eval_model = DQN("eval_model", self.state_shape, self.n_actions).to(self.device)
-        self.target_model = DQN("target_model", self.state_shape, self.n_actions).to(self.device)
+        self.eval_model = DQN(name="eval_model", state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
+        self.target_model = DQN(name="target_model", state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
 
         if not TRAIN_FROM_SCRATCH:
             # TODO

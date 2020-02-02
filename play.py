@@ -2,8 +2,10 @@ import torch
 import numpy as np
 from skimage.transform import resize
 import gym
-# import time
+from gym import wrappers
+import time
 import psutil
+
 
 class Play:
     def __init__(self, agent, env, path):
@@ -13,8 +15,8 @@ class Play:
         self.path = path
         self.agent.ready_to_play(self.path)
         self.env = env
-        self.env._max_episode_steps = 500
-        self.env = gym.wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
+        self.env._max_episode_steps = 1000
+        self.env = wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
         self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
 
         self.memory = psutil.virtual_memory()
@@ -42,7 +44,7 @@ class Play:
     def evaluate(self):
 
         print("--------Play mode--------")
-        for _ in range(20):
+        for _ in range(10):
             done = False
             state = self.env.reset()
             total_reward = 0
@@ -57,6 +59,7 @@ class Play:
                 self.stacked_frames = self.stack_frames(self.stacked_frames, next_state, False)
                 self.env.render()
                 total_reward += r
+                # time.sleep(0.05)
 
             print("Total episode reward:", total_reward)
         self.env.close()

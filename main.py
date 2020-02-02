@@ -7,19 +7,19 @@ from play import Play
 
 from agent import Agent
 
-# ENV_NAME = "MovingDotDiscrete-v0"
+ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
-ENV_NAME = "Breakout-v0"
+# ENV_NAME = "Breakout-v0"
 test_env = gym.make(ENV_NAME)
 
-MAX_EPISODES = 500
-MAX_STEPS = test_env._max_episode_steps
+MAX_EPISODES = 100
+MAX_STEPS = 1000  # test_env._max_episode_steps
 save_interval = 200
 log_interval = 5  # TODO has conflicts with save interval when loading for playing is needed
 
 episode_log = LOG()
 
-TRAIN = False
+TRAIN = True
 
 
 def rgb2gray(img):
@@ -83,15 +83,15 @@ if __name__ == '__main__':
                 episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
         episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
-    else:
-        episode = MAX_EPISODES
-        # step = MAX_STEPS
-        # region play
-        # play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-        play_path = "/home/alireza/Desktop/models-20200121T073005Z-001/models/2020-01-21-04-52-55/episode3000-step424"
-        player = Play(agent, env, play_path)
-        player.evaluate()
-        # endregion
+    # else:
+    episode = MAX_EPISODES
+    step = MAX_STEPS
+    # region play
+    # play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
+    play_path = "/home/alireza/Downloads/2020-02-02-16-24-39-20200202T165623Z-001/2020-02-02-16-24-39/episode100-step1000"
+    player = Play(agent, env, play_path)
+    player.evaluate()
+    # endregion
 
 # for _ in range(100):
 #     test_env.reset()
