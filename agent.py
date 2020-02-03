@@ -38,66 +38,116 @@ def initial_weights(module, linear_initialization=False):
 
 
 class DQN(nn.Module):
-    def __init__(self, n_actions, state_shape, name=''):
+    def __init__(self,
+                 n_actions,
+                 n_res_block,
+                 n_stack,
+                 state_shape,
+                 filters,
+                 first_stride=2,
+                 fc_layer_unit=None
+                 ):
+
+        self.fc_layer_unit = fc_layer_unit
         super(DQN, self).__init__()
-        self.model_name = name
         self.n_actions = n_actions
         width, height, channels = state_shape
 
-        self.conv1 = nn.Conv2d(channels, 16, kernel_size=3, padding=1)
-        self.resnet1 = ResNetLayer(16, filters=16, name="resnet1")
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
-        self.resnet2 = ResNetLayer(32, 32, name="resnet2")
+        self.conv1 = nn.Conv2d(channels, filters[0], kernel_size=3, padding=(1,1))
+        self.batch_norm1 = nn.BatchNorm2d(filters[0])
 
-        convw = get_conv_out(width, kernel_size=2, padding=0, stride=2)  # Max pooling kernel_size and stride
-        convh = get_conv_out(height, kernel_size=2, padding=0, stride=2)  # Max pooling kernel_size and stride
+        self.resnet_lst = []
+        for stack in range(n_stack):
+            for block in range(n_res_block):
+                if stack == 0:
+                    input_filter = filters[0]
+                else:
+                    input_filter = filters[stack - 1]
 
-        self.fc = nn.Linear(convw * convh * 32, 512)
-        nn.init.kaiming_normal_(self.fc.weight)
-        self.fc.bias.data.zero_()
-        self.s_a_value = nn.Linear(512, self.n_actions)
+                if stack != 0 and block == 0:
+                    stride = first_stride
+                else:
+                    stride = 1
 
-        initial_weights(self.modules())
+                res_name = f'resnet_block_{stack * n_res_block + block}'
+                self.resnet_lst.append(res_name)
+                res_block = ResNetLayer(input_filter, filters[stack], first_stride=stride)
+                setattr(self, res_name, res_block)
+
+        conv_w = width
+        conv_h = height
+
+        if first_stride > 1:
+            for _ in range(n_stack - 1):
+                conv_w = get_conv_out(conv_w, kernel_size=3, padding=1, stride=first_stride)
+                conv_h = get_conv_out(conv_h, kernel_size=3, padding=1, stride=first_stride)
+
+        first_in = conv_w * conv_h * filters[-1]
+        if fc_layer_unit is not None:
+            self.fcs = list()
+            for i, units in enumerate(fc_layer_unit):
+                if i == 0:
+                    in_unit = first_in
+                else:
+                    in_unit = fc_layer_unit[i - 1]
+                fc_name = f'fc_{i}'
+                self.fcs.append(fc_name)
+                fc = nn.Linear(in_unit, units)
+                setattr(self, fc_name, fc)
+            first_in = units
+            initial_weights(self.modules(), linear_initialization=True)
+        else:
+            initial_weights(self.modules())
+        self.s_a_value = nn.Linear(first_in, self.n_actions)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.resnet1(x)
-        x = F.relu(self.conv2(x))
-        x = self.resnet2(x)
+        x = F.relu(self.batch_norm1(self.conv1(x)))
+        for res_name in self.resnet_lst:
+            res_layer = getattr(self, res_name)
+            x = res_layer(x)
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc(x))
+        if self.fc_layer_unit is not None:
+            for fc_name in self.fcs:
+                linear = getattr(self, fc_name)
+                x = linear(x)
+                x = F.relu(x)
         x = self.s_a_value(x)
-
         return x
 
 
 class ResNetLayer(nn.Module):
-    def __init__(self, in_channels, filters, name, strides=1, kernel_size=3):
+    def __init__(self, in_channels, filters, first_stride=1, strides=1, kernel_size=3):
         super(ResNetLayer, self).__init__()
 
-        self.filters = filters
-        self.in_channels = in_channels
-        self.layer_name = name
-        self.strides = strides
-        self.kernel_size = kernel_size
+        self.first_stride = first_stride
+        if first_stride > 1:
+            self.transition_layer = nn.Conv2d(in_channels=in_channels,
+                                              out_channels=filters,
+                                              kernel_size=1,
+                                              stride=first_stride,
+                                              # padding=1,
+                                              )
 
-        self.conv1 = nn.Conv2d(in_channels=self.in_channels,
-                               out_channels=self.filters,
-                               kernel_size=self.kernel_size,
-                               stride=self.strides,
+        self.conv1 = nn.Conv2d(in_channels=in_channels,
+                               out_channels=filters,
+                               kernel_size=kernel_size,
+                               stride=first_stride,
                                padding=1)
 
-        self.batch_norm = nn.BatchNorm2d(self.filters)
+        self.batch_norm = nn.BatchNorm2d(filters)
 
-        self.conv2 = nn.Conv2d(in_channels=self.filters,
-                               out_channels=self.filters,
-                               kernel_size=self.kernel_size,
-                               stride=self.strides,
+        self.conv2 = nn.Conv2d(in_channels=filters,
+                               out_channels=filters,
+                               kernel_size=kernel_size,
+                               stride=strides,
                                padding=1)
         initial_weights(self.modules())
 
     def forward(self, x):
-        inputs = x
+        if self.first_stride > 1:
+            inputs = self.transition_layer(x)
+        else:
+            inputs = x
         x = F.relu(self.conv1(x))
         x = self.batch_norm(x)
         x = self.conv2(x)
@@ -117,11 +167,18 @@ class Agent:
         torch.cuda.empty_cache()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.eval_model = DQN(name="eval_model", state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
-        self.target_model = DQN(name="target_model", state_shape=self.state_shape, n_actions=self.n_actions).to(
-            self.device)
-        w, h, c = state_shape
-        summary(self.eval_model, input_size=(c, w, h))
+        self.eval_model = DQN(state_shape=self.state_shape,
+                              n_actions=self.n_actions,
+                              n_res_block=1,
+                              n_stack=2,
+                              filters=[16, 32]).to(self.device)
+        self.target_model = DQN(state_shape=self.state_shape,
+                              n_actions=self.n_actions,
+                              n_res_block=1,
+                              n_stack=2,
+                              filters=[16, 32]).to(self.device)
+        # w, h, c = state_shape
+        # summary(self.eval_model, input_size=(c, w, h))
 
         if not TRAIN_FROM_SCRATCH:
             # TODO
