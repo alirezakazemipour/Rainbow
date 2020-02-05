@@ -6,20 +6,27 @@ from torch.optim.adam import Adam
 from logger import LOG
 from torchsummary import summary
 import numpy as np
+from torch.optim.lr_scheduler import StepLR
 
 from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
 torch.cuda.empty_cache()
+# torch.cuda.synchronize()
 
 TRAIN_FROM_SCRATCH = True
 
 
+# region the Size of output layers
 def get_conv_out(n, stride, kernel_size, padding=0):
     return (n + 2 * padding - kernel_size) // stride + 1
 
 
+# endregion
+
+
+# region initial_weights
 def initial_weights(module, linear_initialization=False):
     """
     check out https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py#L118
@@ -37,6 +44,10 @@ def initial_weights(module, linear_initialization=False):
             nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
 
 
+# endregion
+
+
+# region model
 class DQN(nn.Module):
     def __init__(self,
                  n_actions,
@@ -53,7 +64,7 @@ class DQN(nn.Module):
         self.n_actions = n_actions
         width, height, channels = state_shape
 
-        self.conv1 = nn.Conv2d(channels, filters[0], kernel_size=3, padding=(1,1))
+        self.conv1 = nn.Conv2d(channels, filters[0], kernel_size=3, padding=(1, 1))
         self.batch_norm1 = nn.BatchNorm2d(filters[0])
 
         self.resnet_lst = []
@@ -61,8 +72,10 @@ class DQN(nn.Module):
             for block in range(n_res_block):
                 if stack == 0:
                     input_filter = filters[0]
-                else:
+                elif block == 0:
                     input_filter = filters[stack - 1]
+                else:
+                    input_filter = filters[stack]
 
                 if stack != 0 and block == 0:
                     stride = first_stride
@@ -154,6 +167,8 @@ class ResNetLayer(nn.Module):
         return F.relu(x + inputs)
 
 
+# endregion
+
 class Agent:
     def __init__(self, n_actions, gamma, tau, lr, state_shape, capacity, alpha, epsilon_start, epsilon_end,
                  epsilon_decay, batch_size):
@@ -173,10 +188,10 @@ class Agent:
                               n_stack=2,
                               filters=[16, 32]).to(self.device)
         self.target_model = DQN(state_shape=self.state_shape,
-                              n_actions=self.n_actions,
-                              n_res_block=1,
-                              n_stack=2,
-                              filters=[16, 32]).to(self.device)
+                                n_actions=self.n_actions,
+                                n_res_block=1,
+                                n_stack=2,
+                                filters=[16, 32]).to(self.device)
         # w, h, c = state_shape
         # summary(self.eval_model, input_size=(c, w, h))
 
@@ -190,6 +205,7 @@ class Agent:
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
         # self.optimizer = RMSprop(self.eval_model.parameters(), lr=self.lr, alpha=alpha)
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
+        self.scheduler = StepLR(self.optimizer, step_size=int(10e4), gamma=0.1)
         self.memory = ReplayMemory(capacity)
 
         self.epsilon_start = epsilon_start
@@ -198,6 +214,7 @@ class Agent:
         self.epsilon = self.epsilon_start
 
         self.steps = 0
+        # self.train_steps = 0
 
     def choose_action(self, state):
         self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
@@ -269,18 +286,19 @@ class Agent:
 
             q_target = rewards + self.gamma * target_value
         loss = self.loss_fn(q_eval, q_target.view(self.batch_size, 1))
-
         self.optimizer.zero_grad()
         loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)  # clip gradients to help stabilise training
 
         # for param in self.Qnet.parameters():
         #     param.grad.data.clamp_(-1, 1)
-
         self.optimizer.step()
+        # print(f"lr:{self.scheduler.get_lr()}") # Don't worry if you see some jumps, it is pytorch bug in this function but the actual function is working pretty correct
+        # self.scheduler.step()
         var = loss.detach().cpu().numpy()
         self.soft_update_of_target_network(self.eval_model, self.target_model)
 
+        # self.train_steps += 1
         return var
 
     def ready_to_play(self, path):
