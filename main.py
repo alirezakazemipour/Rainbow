@@ -1,5 +1,6 @@
-from moving_dot_env import MovingDotDiscreteEnv
+# import gym_moving_dot
 # import gym
+from moving_dot_env import MovingDotDiscreteEnv
 import numpy as np
 from skimage.transform import resize
 from logger import LOG
@@ -13,7 +14,7 @@ ENV_NAME = "MovingDotDiscrete-v0"
 # test_env = gym.make(ENV_NAME)
 test_env = MovingDotDiscreteEnv()
 
-MAX_EPISODES = 100
+MAX_EPISODES = 450
 MAX_STEPS = 1000  # test_env._max_episode_steps
 save_interval = 200
 log_interval = 5  # TODO has conflicts with save interval when loading for playing is needed
@@ -46,11 +47,13 @@ def stack_frames(stacked_frames, state, is_new_episode):
 
 if __name__ == '__main__':
 
+    # env = gym.make(ENV_NAME)
+    # n_actions = env.action_space.n
     env = MovingDotDiscreteEnv()
-    n_actions = 4  # env.action_space.n
+    n_actions = 4
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions, gamma=0.99, lr=6.25e-5,
-                  tau=0.001, state_shape=[84, 84, 4], capacity=10000,
+                  tau=0.001, state_shape=[84, 84, 4], capacity=39000,
                   alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
                   epsilon_decay=500, batch_size=32)
     if TRAIN:
@@ -68,9 +71,10 @@ if __name__ == '__main__':
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
                 s_, r, d, _ = env.step(action)
+                # r = np.clip(r, -1, 1)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                env.render()
+                # env.render()
                 if step % 4 == 0:
                     loss = agent.train()
                     episode_loss += loss
@@ -91,7 +95,7 @@ if __name__ == '__main__':
     step = MAX_STEPS
     # region play
     # play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-    play_path = "/home/alireza/Downloads/2020-02-16-10-48-38-20200216T130153Z-001/2020-02-16-10-48-38/episode450-step1000"
+    play_path = "/content/drive/My Drive/Colab Notebooks/Rainbow/models/2020-02-16-10-48-38/episode450-step1000"
     player = Play(agent, env, play_path)
     player.evaluate()
     # endregion

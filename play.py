@@ -24,7 +24,7 @@ class Play:
         self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.VideoWriter = cv2.VideoWriter('output.avi', self.fourcc, 20.0, (160, 210))
+        self.VideoWriter = cv2.VideoWriter('output.avi', self.fourcc, 50.0, (160, 210))
 
     @staticmethod
     def rgb2gray(img):
@@ -55,8 +55,8 @@ class Play:
             self.stacked_frames = self.stack_frames(self.stacked_frames, state, True)
             i = 0
 
-            while not done:
-                # i += 1
+            while i < 1000 and not done:
+                i += 1
                 stacked_frames_copy = self.stacked_frames.copy()
                 action = self.agent.get_action(stacked_frames_copy)
                 next_state, r, done, info = self.env.step(action)
@@ -64,6 +64,7 @@ class Play:
                 # self.env.render()
                 total_reward += r
                 # time.sleep(0.05)
+                # cv2.waitKey(20)
                 self.VideoWriter.write(next_state)
 
             print("Total episode reward:", total_reward)

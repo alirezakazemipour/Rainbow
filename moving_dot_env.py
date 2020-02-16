@@ -136,7 +136,7 @@ class MovingDotEnv:
         return new_pos
 
     def check_terminal(self, pos):
-        dis = np.linalg.norm(pos - self.centre)
+        dis = np.sqrt(np.sum(np.square(np.array(np.mean(pos, axis=0)) - np.array(self.centre))))
         if dis < 5:
             return True
         return False

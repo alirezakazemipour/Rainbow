@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import psutil
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import datetime
 import torch
 import os
@@ -102,12 +102,13 @@ class LOG:
                                             to_gb(memory.used),
                                             to_gb(memory.total)
                                             ))
-        # with SummaryWriter("./logs/" + self.dir) as writer:
-        #     writer.add_scalar("Loss", loss, self.simulation_steps)
-        #     writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
-        #     writer.add_hparams({
-        #         "lr": 0.005},
-        #         {"hparam/loss": loss})
+        with SummaryWriter("./logs/" + self.dir) as writer:
+            writer.add_scalar("Loss", loss, self.simulation_steps)
+            writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
+            writer.add_scalar("Episode reward", episode_reward, self.simulation_steps)
+            writer.add_hparams({
+                "lr": 0.005},
+                {"hparam/loss": loss})
 
         # print("Min episode reward:{:3d}| "
         #       "Max episode reward:{:3d}| "
