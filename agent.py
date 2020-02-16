@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.optim.rmsprop import RMSprop
 from torch.optim.adam import Adam
 from logger import LOG
-from torchsummary import summary
+# from torchsummary import summary
 import numpy as np
 from torch.optim.lr_scheduler import StepLR
 

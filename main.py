@@ -1,5 +1,5 @@
-import gym_moving_dot
-import gym
+from moving_dot_env import MovingDotDiscreteEnv
+# import gym
 import numpy as np
 from skimage.transform import resize
 from logger import LOG
@@ -10,7 +10,8 @@ from agent import Agent
 ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
 # ENV_NAME = "Breakout-v0"
-test_env = gym.make(ENV_NAME)
+# test_env = gym.make(ENV_NAME)
+test_env = MovingDotDiscreteEnv()
 
 MAX_EPISODES = 100
 MAX_STEPS = 1000  # test_env._max_episode_steps
@@ -45,8 +46,8 @@ def stack_frames(stacked_frames, state, is_new_episode):
 
 if __name__ == '__main__':
 
-    env = gym.make(ENV_NAME)
-    n_actions = env.action_space.n
+    env = MovingDotDiscreteEnv()
+    n_actions = 5  # env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions, gamma=0.99, lr=6.25e-5,
                   tau=0.001, state_shape=[84, 84, 4], capacity=10000,
@@ -69,7 +70,7 @@ if __name__ == '__main__':
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.render()
+                env.render()
                 if step % 4 == 0:
                     loss = agent.train()
                     episode_loss += loss
