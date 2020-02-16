@@ -3,6 +3,10 @@ import cv2
 
 
 class MovingDotEnv:
+    CV_ACTION = {0: np.array([0, -1]),
+                 1: np.array([-1, 0]),
+                 2: np.array([0, 1]),
+                 3: np.array([1, 0])}
 
     def __init__(self):
 
@@ -50,11 +54,21 @@ class MovingDotEnv:
         return ['NOOP', 'DOWN', 'RIGHT', 'UP', 'LEFT']
 
     def step(self, action):
-        prev_pos = self.pos[:]
+        # prev_pos = self.pos[:] # knock knock
+        action = int(action)
+        prev_pos = self.pos
 
-        self._update_pos(action)
+        # self._update_pos(action)  # knock knock
+        self.pos = self._update_pos(self.pos, action)
 
-        ob = self._get_ob()
+        # ob = self._get_ob() # knock knock
+
+        old_dis = np.linalg.norm(prev_pos - self.centre)
+        new_dis = np.linalg.norm(self.pos - self.centre)
+        if old_dis > new_dis:
+            reward = 1
+        else:
+            reward = -1
 
         self.steps += 1
         if self.steps < self.max_steps:
@@ -62,18 +76,23 @@ class MovingDotEnv:
         else:
             episode_over = True
 
-        dist1 = np.linalg.norm(prev_pos - self.centre)
-        dist2 = np.linalg.norm(self.pos - self.centre)
-        if dist2 < dist1:
-            reward = 1
-        elif dist2 == dist1:
-            reward = 0
-        else:
-            reward = -1
+        self.pose = self.check_obstacles(self.pos)
 
-        return ob, reward, episode_over, {}
+        reach_goal = self.check_terminal(self.pose)
 
-    def _update_pos(self, action):
+        # dist1 = np.linalg.norm(prev_pos - self.centre)
+        # dist2 = np.linalg.norm(self.pos - self.centre)
+        # if dist2 < dist1:
+        #     reward = 1
+        # elif dist2 == dist1:
+        #     reward = 0
+        # else:
+        #     reward = -1
+        ob = self._get_ob()
+
+        return ob, reward, episode_over or reach_goal, {}
+
+    def _update_pos(self, old_pos, action):  # Knock Knock
         """ subclass is supposed to implement the logic
             to update the frame given an action at t """
         raise NotImplementedError
@@ -88,6 +107,40 @@ class MovingDotEnv:
         cv2.imshow("obs", img)
         cv2.waitKey(2)
 
+    def check_obstacles(self, new_pos):
+        """
+         We consider the outer pixels of environment as obstacles and agent is supposed to prevent from entering those
+         pixels so if it does it will be returned to pixed it was before taking the action and there will be a punishment
+         for it if anything has been specified for obstacle reward.
+        """
+        (x1, y1)= new_pos
+        if x1 < 0:
+            delta = abs(x1)
+            x1 += delta
+            # x2 += delta
+        elif x1 >= 160:
+            delta = x1 - (160 - 1)
+            x1 -= delta
+            # x2 -= delta
+
+        if y1 < 0:
+            delta = abs(y1)
+            y1 += delta
+            # y2 += delta
+
+        elif y1 >= 210:
+            delta = y1 - (210 - 1)
+            y1 -= delta
+            # y2 -= delta
+        new_pos = np.array([x1, y1])
+        return new_pos
+
+    def check_terminal(self, pos):
+        dis = np.linalg.norm(pos - self.centre)
+        if dis < 5:
+            return True
+        return False
+
 
 class MovingDotDiscreteEnv(MovingDotEnv):
     """ Discrete Action MovingDot env """
@@ -98,21 +151,11 @@ class MovingDotDiscreteEnv(MovingDotEnv):
     def reset(self):
         return super(MovingDotDiscreteEnv, self).reset()
 
-    def _update_pos(self, action):
-        assert action >= 0 and action <= 4
+    def _update_pos(self, old_pos, action):
+        assert action >= 0 and action <= 3
 
-        if action == 0:
-            # NOOP
-            pass
-        elif action == 1:
-            self.pos[1] += 1
-        elif action == 2:
-            self.pos[0] += 1
-        elif action == 3:
-            self.pos[1] -= 1
-        elif action == 4:
-            self.pos[0] -= 1
-        self.pos[0] = np.clip(self.pos[0],
-                              self.dot_size[0], 159 - self.dot_size[0])
-        self.pos[1] = np.clip(self.pos[1],
-                              self.dot_size[1], 209 - self.dot_size[1])
+        p1, p2 = old_pos
+        x = p1 + self.CV_ACTION[action][0] * 1
+        y = p2 + self.CV_ACTION[action][1] * 1
+        new_pos = (x, y)
+        return new_pos

@@ -5,6 +5,7 @@ import gym
 from gym import wrappers
 import time
 import psutil
+import cv2
 
 
 class Play:
@@ -16,11 +17,14 @@ class Play:
         self.agent.ready_to_play(self.path)
         self.env = env
         self.env._max_episode_steps = 1000
-        self.env = wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
+        # self.env = wrappers.Monitor(self.env, "./vid", video_callable=lambda episode_id: True, force=True)
         self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
 
         self.memory = psutil.virtual_memory()
         self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
+
+        self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        self.VideoWriter = cv2.VideoWriter('output.avi', self.fourcc, 20.0, (160, 210))
 
     @staticmethod
     def rgb2gray(img):
@@ -57,9 +61,12 @@ class Play:
                 action = self.agent.get_action(stacked_frames_copy)
                 next_state, r, done, info = self.env.step(action)
                 self.stacked_frames = self.stack_frames(self.stacked_frames, next_state, False)
-                self.env.render()
+                # self.env.render()
                 total_reward += r
                 # time.sleep(0.05)
+                self.VideoWriter.write(next_state)
 
             print("Total episode reward:", total_reward)
-        self.env.close()
+        # self.env.close()
+        self.VideoWriter.release()
+        cv2.destroyAllWindows()
