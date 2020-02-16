@@ -50,7 +50,7 @@ if __name__ == '__main__':
     n_actions = 5  # env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions, gamma=0.99, lr=6.25e-5,
-                  tau=0.001, state_shape=[84, 84, 4], capacity=10000,
+                  tau=0.001, state_shape=[84, 84, 4], capacity=1000,
                   alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
                   epsilon_decay=500, batch_size=32)
     if TRAIN:

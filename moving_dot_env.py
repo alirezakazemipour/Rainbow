@@ -1,23 +1,8 @@
-"""
-A simple OpenAI gym environment consisting of a white dot moving in a black
-square.
-"""
-
-import gym
-# from gym import spaces
-# from gym.utils import seeding
 import numpy as np
 import cv2
 
 
-# class ALE(object):
-#     def __init__(self):
-#         self.lives = lambda: 0
-
-
 class MovingDotEnv:
-    """ Base class for MovingDot game """
-    metadata = {'render.modes': ['human']}
 
     def __init__(self):
 
@@ -26,18 +11,8 @@ class MovingDotEnv:
         self.random_start = True
         self.max_steps = 1000
 
-        # environment setup
-        # self.observation_space = spaces.Box(low=0,
-        #                                     high=255,
-        #                                     shape=(210, 160, 3))
         self.observation_space = np.array((210, 160, 3), dtype=np.uint8)
         self.centre = np.array([80, 105])
-
-
-        # Needed by atari_wrappers in OpenAI baselines
-        # self.ale = ALE()
-        seed = None
-        # self.np_random, _ = seeding.np_random(seed)
 
         self.reset()
 
@@ -70,7 +45,8 @@ class MovingDotEnv:
         ob[y - h:y + h, x - w:x + w, :] = 255
         return ob
 
-    def get_action_meanings(self):
+    @staticmethod
+    def get_action_meanings():
         return ['NOOP', 'DOWN', 'RIGHT', 'UP', 'LEFT']
 
     def step(self, action):
@@ -105,20 +81,12 @@ class MovingDotEnv:
     # Based on gym's atari_env.py
     def render(self, mode='human', close=False):
         if close:
-            # if self.viewer is not None:
-            #     self.viewer.close()
-            #     self.viewer = None
+            cv2.destroyAllWindows()
             return
 
-        # We only import this here in case we're running on a headless server
-        from gym.envs.classic_control import rendering
-        assert mode == 'human', "MovingDot only supports human render mode"
         img = self._get_ob()
         cv2.imshow("obs", img)
         cv2.waitKey(2)
-        # if self.viewer is None:
-        #     self.viewer = rendering.SimpleImageViewer()
-        # self.viewer.imshow(img)
 
 
 class MovingDotDiscreteEnv(MovingDotEnv):
@@ -148,33 +116,3 @@ class MovingDotDiscreteEnv(MovingDotEnv):
                               self.dot_size[0], 159 - self.dot_size[0])
         self.pos[1] = np.clip(self.pos[1],
                               self.dot_size[1], 209 - self.dot_size[1])
-
-
-# class MovingDotContinuousEnv(MovingDotEnv):
-#     """ Continuous Action MovingDot env """
-#     def __init__(self, low=-1, high=1, moving_thd=0.1):  # moving_thd is empirically determined
-#         super(MovingDotContinuousEnv, self).__init__()
-#
-#         self._high = high
-#         self._low = low
-#         self._moving_thd = moving_thd  # used to decide if the object has to move, see step func below.
-#         self.action_space = spaces.Box(low=low, high=high, shape=(2,), dtype=np.float32)
-#
-#     def _update_pos(self, action):
-#         _x, _y = action
-#         assert self._low <= _x <= self._high, "movement along x-axis has to fall in between -1 to 1"
-#         assert self._low <= _y <= self._high, "movement along y-axis has to fall in between -1 to 1"
-#
-#         """
-#         [Note]
-#         Since the action values are continuous for each x/y pos,
-#         we round the position of the object after executing the action on the 2D space.
-#         """
-#         new_x = self.pos[0] + 1 if _x >= self._moving_thd else self.pos[0] - 1
-#         new_y = self.pos[1] + 1 if _y >= self._moving_thd else self.pos[1] - 1
-#
-#         self.pos[0] = np.clip(new_x,
-#                               self.dot_size[0], 159 - self.dot_size[0])
-#         self.pos[1] = np.clip(new_y,
-#                               self.dot_size[1], 209 - self.dot_size[1])
-#
