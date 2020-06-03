@@ -1,14 +1,9 @@
-import gym_moving_dot
 import gym
-import numpy as np
-from skimage.transform import resize
 from logger import LOG
 from play import Play
-
 from agent import Agent
+from utils import *
 
-# ENV_NAME = "MovingDotDiscrete-v0"
-# ENV_NAME = "MontezumaRevenge-v0"
 ENV_NAME = "Breakout-v0"
 MAX_EPISODES = 20
 MAX_STEPS = 1000
@@ -19,35 +14,22 @@ episode_log = LOG()
 
 TRAIN = True
 
-
-def rgb2gray(img):
-    return 0.2125 * img[..., 0] + 0.7154 * img[..., 1] + 0.0721 * img[..., 2]
-
-
-def preprocessing(img):
-    img = rgb2gray(img) / 255.0
-    img = resize(img, output_shape=[84, 84])
-    return img
-
-
-def stack_frames(stacked_frames, state, is_new_episode):
-    frame = preprocessing(state)
-
-    if is_new_episode:
-        stacked_frames = np.stack([frame for _ in range(4)], axis=2)
-    else:
-        stacked_frames = stacked_frames[..., :3]
-        stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=2)], axis=2)
-    return stacked_frames
-
-
 if __name__ == '__main__':
 
     env = gym.make(ENV_NAME)
     n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions, 0.99, 6.25e-5, 0.001, [84, 84, 4], 10000, alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
-                  epsilon_decay=200, batch_size=32)
+    agent = Agent(n_actions=n_actions,
+                  gamma=0.99,
+                  lr=6.25e-5,
+                  tau=0.001,
+                  state_shape=[84, 84, 4],
+                  capacity=10000,
+                  alpha=0.99,
+                  epsilon_start=0.9,
+                  epsilon_end=0.05,
+                  epsilon_decay=200,
+                  batch_size=32)
     if TRAIN:
 
         for episode in range(1, MAX_EPISODES + 1):

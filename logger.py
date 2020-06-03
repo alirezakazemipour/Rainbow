@@ -17,28 +17,22 @@ episodes_rewards = []
 class LOG:
     simulation_steps = 0
 
-    # episode = 0
-    # steps = 0
-
     def __init__(self):
         self.moving_avg_window = 5
         self.dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.create_dir(self.dir)
-        # self.writer = SummaryWriter("./logs/" + self.dir)
         self.min_episode_reward = np.inf
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
         self.avg_steps_reward = 0
-
-        # self.episode = 1
-        # self.steps = 1
-
         self.save_interval = 10
 
     @staticmethod
     def create_dir(dir):
-        dir = os.path.join("./models/" + dir)
-        if not os.path.exists(dir):
+        dir = os.path.join("models/" + dir)
+        if not os.path.exists("models"):
+            os.mkdir("models")
+        elif not os.path.exists(dir):
             os.mkdir(dir)
 
     def on(self):
