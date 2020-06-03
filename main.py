@@ -65,7 +65,7 @@ if __name__ == '__main__':
             episode_log.off()
             if episode % log_interval == 0:
                 episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
-            # print(f'episode: {episode}. reward: {episode_reward}. loss: {episode_loss}')
+            agent.update_epsilon()
     else:
         episode = MAX_EPISODES
         step = MAX_STEPS

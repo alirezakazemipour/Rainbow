@@ -24,6 +24,7 @@ class Agent:
         self.state_shape = state_shape
         self.batch_size = batch_size
         self.update_count = 0
+        self.eps_threshold = 1
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -49,8 +50,6 @@ class Agent:
         self.steps = 0
 
     def choose_action(self, state):
-        self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-                             np.exp(-1. * self.steps / self.epsilon_decay)
 
         if np.random.random() > self.eps_threshold:
             with torch.no_grad():
@@ -141,3 +140,7 @@ class Agent:
         model_state_dict, _ = LOG.load_weights(path)
         self.eval_model.load_state_dict(model_state_dict)
         self.eval_model.eval()
+
+    def update_epsilon(self):
+        self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
+                             np.exp(-1. * self.steps / self.epsilon_decay)

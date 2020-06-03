@@ -99,9 +99,9 @@ class LOG:
         with SummaryWriter("./logs/" + self.dir) as writer:
             writer.add_scalar("Loss", loss, self.simulation_steps)
             writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
-            writer.add_hparams({
-                "lr": 0.005},
-                {"hparam/loss": loss})
+            # writer.add_hparams({
+            #     "lr": 0.005},
+            #     {"hparam/loss": loss})
 
         # print("Min episode reward:{:3d}| "
         #       "Max episode reward:{:3d}| "
