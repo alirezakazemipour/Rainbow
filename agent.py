@@ -8,7 +8,6 @@ from logger import LOG
 import numpy as np
 from torch.optim.lr_scheduler import StepLR
 
-
 from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
@@ -18,153 +17,62 @@ torch.cuda.empty_cache()
 TRAIN_FROM_SCRATCH = True
 
 
-def get_conv_out(n, stride, kernel_size, padding=0):
-    return (n + 2 * padding - kernel_size) // stride + 1
-
-
-def initial_weights(module, linear_initialization=False):
-    """
-    check out https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py#L118
-    """
-    for m in module:
-        if isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(m.weight.data, mode='fan_out', nonlinearity='relu')
-            # we can set bias to zero but as reference resnet initialization did, let it be as it is(default)
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1)
-            nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.Linear) and linear_initialization:
-            # it's better we don't initialize linear layers because our
-            # linear layer has no activation function and it would be ok to go with default(not atari)
-            nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
-
-# region model
-# region model
 class DQN(nn.Module):
-    def __init__(self,
-                 n_actions,
-                 n_res_block,
-                 n_stack,
-                 state_shape,
-                 filters,
-                 first_stride=2,
-                 fc_layer_unit=None
-                 ):
-
-        self.fc_layer_unit = fc_layer_unit
+    def __init__(self, name, state_shape, n_actions):
         super(DQN, self).__init__()
-        self.n_actions = n_actions
-        width, height, channels = state_shape
+        self.name = name
+        width, height, channel = state_shape
+        self.conv1 = nn.Conv2d(channel, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
 
-        self.conv1 = nn.Conv2d(channels, filters[0], kernel_size=3, padding=(1, 1))
-        self.batch_norm1 = nn.BatchNorm2d(filters[0])
+        def conv2d_size_out(size, kernel_size=5, stride=2):
+            return (size - kernel_size) // stride + 1
 
-        self.resnet_lst = []
-        for stack in range(n_stack):
-            for block in range(n_res_block):
-                if stack == 0:
-                    input_filter = filters[0]
-                elif block == 0:
-                    input_filter = filters[stack - 1]
-                else:
-                    input_filter = filters[stack]
+        convw = conv2d_size_out(conv2d_size_out(width, kernel_size=8, stride=4), kernel_size=4, stride=2)
+        convh = conv2d_size_out(conv2d_size_out(height, kernel_size=8, stride=4), kernel_size=4, stride=2)
 
-                if stack != 0 and block == 0:
-                    stride = first_stride
-                else:
-                    stride = 1
+        convw = conv2d_size_out(convw, kernel_size=3, stride=1)
+        convh = conv2d_size_out(convh, kernel_size=3, stride=1)
 
-                res_name = f'resnet_block_{stack * n_res_block + block}'
-                self.resnet_lst.append(res_name)
-                res_block = ResNetLayer(input_filter, filters[stack], first_stride=stride)
-                setattr(self, res_name, res_block)
+        linear_input_size = convw * convh * 64
 
-        conv_w = width
-        conv_h = height
+        self.adv_fc = nn.Linear(linear_input_size, 512)
+        nn.init.kaiming_normal_(self.adv_fc.weight)
+        self.adv_fc.bias.detach().zero_()
+        self.v_fc = nn.Linear(linear_input_size, 512)
+        nn.init.kaiming_normal_(self.v_fc.weight)
+        self.v_fc.bias.detach().zero_()
 
-        if first_stride > 1:
-            for _ in range(n_stack - 1):
-                conv_w = get_conv_out(conv_w, kernel_size=3, padding=1, stride=first_stride)
-                conv_h = get_conv_out(conv_h, kernel_size=3, padding=1, stride=first_stride)
+        self.adv_value = nn.Linear(512, n_actions)
+        nn.init.xavier_normal_(self.adv_value.weight)
+        self.adv_value.bias.detach().zero_()
+        self.s_value = nn.Linear(512, 1)
+        nn.init.xavier_normal_(self.s_value.weight)
+        self.s_value.bias.detach().zero_()
 
-        first_in = conv_w * conv_h * filters[-1]
-        if fc_layer_unit is not None:
-            self.fcs = list()
-            for i, units in enumerate(fc_layer_unit):
-                if i == 0:
-                    in_unit = first_in
-                else:
-                    in_unit = fc_layer_unit[i - 1]
-                fc_name = f'fc_{i}'
-                self.fcs.append(fc_name)
-                fc = nn.Linear(in_unit, units)
-                setattr(self, fc_name, fc)
-            first_in = units
-            initial_weights(self.modules(), linear_initialization=True)
-        else:
-            initial_weights(self.modules())
-        self.adv_value = nn.Linear(first_in, n_actions)
-        self.s_value = nn.Linear(first_in, 1)
-        # self.s_a_value = nn.Linear(first_in, self.n_actions)
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight.detach())
+                m.bias.detach().zero_()
+            # elif isinstance(m, torch.nn.Linear):
+            #     nn.init.kaiming_normal_(m.weight.detach())
+            #     m.bias.detach().zero_()
 
     def forward(self, x):
-        x = F.relu(self.batch_norm1(self.conv1(x)))
-        for res_name in self.resnet_lst:
-            res_layer = getattr(self, res_name)
-            x = res_layer(x)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
         x = x.view(x.size(0), -1)
-        if self.fc_layer_unit is not None:
-            for fc_name in self.fcs:
-                linear = getattr(self, fc_name)
-                x = linear(x)
-                x = F.relu(x)
-        # x = self.s_a_value(x)
-        adv_value = self.adv_value(x)
-        s_value = self.s_value(x)
+        adv_fc = F.relu(self.adv_fc(x))
+        v_fc = F.relu(self.v_fc(x))
+        adv_value = self.adv_value(adv_fc)
+        s_value = self.s_value(v_fc)
+
         x = s_value + adv_value - adv_value.mean(1, keepdim=True)
+
         return x
 
-
-class ResNetLayer(nn.Module):
-    def __init__(self, in_channels, filters, first_stride=1, strides=1, kernel_size=3):
-        super(ResNetLayer, self).__init__()
-
-        self.first_stride = first_stride
-        if first_stride > 1:
-            self.transition_layer = nn.Conv2d(in_channels=in_channels,
-                                              out_channels=filters,
-                                              kernel_size=1,
-                                              stride=first_stride,
-                                              # padding=1,
-                                              )
-
-        self.conv1 = nn.Conv2d(in_channels=in_channels,
-                               out_channels=filters,
-                               kernel_size=kernel_size,
-                               stride=first_stride,
-                               padding=1)
-
-        self.batch_norm = nn.BatchNorm2d(filters)
-
-        self.conv2 = nn.Conv2d(in_channels=filters,
-                               out_channels=filters,
-                               kernel_size=kernel_size,
-                               stride=strides,
-                               padding=1)
-        initial_weights(self.modules())
-
-    def forward(self, x):
-        if self.first_stride > 1:
-            inputs = self.transition_layer(x)
-        else:
-            inputs = x
-        x = F.relu(self.conv1(x))
-        x = self.batch_norm(x)
-        x = self.conv2(x)
-        return F.relu(x + inputs)
-
-
-# endregion
 
 
 class Agent:
@@ -176,22 +84,13 @@ class Agent:
         self.lr = lr
         self.state_shape = state_shape
         self.batch_size = batch_size
+        self.update_count = 0
 
         torch.cuda.empty_cache()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.eval_model = DQN(state_shape=self.state_shape,
-                              n_actions=self.n_actions,
-                              n_res_block=1,
-                              n_stack=2,
-                              filters=[16, 32],
-                              fc_layer_unit=[256, 256]).to(self.device)
-        self.target_model = DQN(state_shape=self.state_shape,
-                              n_actions=self.n_actions,
-                              n_res_block=1,
-                              n_stack=2,
-                              filters=[16, 32],
-                              fc_layer_unit=[256, 256]).to(self.device)
+        self.eval_model = DQN("eval_model", self.state_shape, self.n_actions).to(self.device)
+        self.target_model = DQN("target_model", self.state_shape, self.n_actions).to(self.device)
 
         if not TRAIN_FROM_SCRATCH:
             # TODO
@@ -250,6 +149,12 @@ class Agent:
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
 
+    def hard_update_of_target_network(self, to_model=None, from_model=None):
+        self.target_model.load_state_dict(self.eval_model.state_dict())
+        self.target_model.eval()
+        # for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
+        #     to_model.data.copy_(from_model.data.clone())
+
     def unpack_batch(self, batch):
 
         batch = Transition(*zip(*batch))
@@ -286,7 +191,7 @@ class Agent:
 
         self.optimizer.zero_grad()
         loss.backward()
-        # torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 100)  # clip gradients to help stabilise training
+        torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)  # clip gradients to help stabilise training
 
         # for param in self.Qnet.parameters():
         #     param.grad.data.clamp_(-1, 1)
@@ -295,6 +200,8 @@ class Agent:
         self.scheduler.step()
         var = loss.detach().cpu().numpy()
         self.soft_update_of_target_network(self.eval_model, self.target_model)
+        # if self.update_count % 10000 == 0:
+        #     self.hard_update_of_target_network()
 
         return var
 

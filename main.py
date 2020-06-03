@@ -1,6 +1,5 @@
-# import gym_moving_dot
-# import gym
-from moving_dot_env import MovingDotDiscreteEnv
+import gym_moving_dot
+import gym
 import numpy as np
 from skimage.transform import resize
 from logger import LOG
@@ -8,20 +7,17 @@ from play import Play
 
 from agent import Agent
 
-ENV_NAME = "MovingDotDiscrete-v0"
+# ENV_NAME = "MovingDotDiscrete-v0"
 # ENV_NAME = "MontezumaRevenge-v0"
-# ENV_NAME = "Breakout-v0"
-# test_env = gym.make(ENV_NAME)
-test_env = MovingDotDiscreteEnv()
-
-MAX_EPISODES = 450
-MAX_STEPS = 1000  # test_env._max_episode_steps
+ENV_NAME = "Breakout-v0"
+MAX_EPISODES = 20
+MAX_STEPS = 1000
 save_interval = 200
-log_interval = 5  # TODO has conflicts with save interval when loading for playing is needed
+log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
 
 episode_log = LOG()
 
-TRAIN = False
+TRAIN = True
 
 
 def rgb2gray(img):
@@ -47,10 +43,8 @@ def stack_frames(stacked_frames, state, is_new_episode):
 
 if __name__ == '__main__':
 
-    # env = gym.make(ENV_NAME)
-    # n_actions = env.action_space.n
-    env = MovingDotDiscreteEnv()
-    n_actions = 4
+    env = gym.make(ENV_NAME)
+    n_actions = env.action_space.n
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions, gamma=0.99, lr=6.25e-5,
                   tau=0.001, state_shape=[84, 84, 4], capacity=39000,
@@ -71,14 +65,17 @@ if __name__ == '__main__':
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
                 s_, r, d, _ = env.step(action)
-                # r = np.clip(r, -1, 1)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
+                r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if step % 4 == 0:
                     loss = agent.train()
                     episode_loss += loss
+                else:
+                    episode_loss += 0
                 episode_reward += r
+
                 # if step % save_interval == 0:
                 #     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
 
