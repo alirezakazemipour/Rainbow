@@ -2,7 +2,7 @@ from torch import nn, from_numpy
 import torch
 from model import Model
 from torch.optim.adam import Adam
-from logger import LOG
+from logger import Logger
 import numpy as np
 
 from replay_memory import ReplayMemory, Transition
@@ -60,7 +60,7 @@ class Agent:
         else:
             action = torch.randint(low=0, high=self.n_actions, size=(1,), device=self.device)[0]
         self.steps += 1
-        LOG.simulation_steps += 1
+        Logger.simulation_steps += 1
 
         return action
 
@@ -137,7 +137,7 @@ class Agent:
         return var
 
     def ready_to_play(self, path):
-        model_state_dict, _ = LOG.load_weights(path)
+        model_state_dict, _ = Logger.load_weights(path)
         self.eval_model.load_state_dict(model_state_dict)
         self.eval_model.eval()
 
