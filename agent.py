@@ -15,7 +15,7 @@ TRAIN_FROM_SCRATCH = True
 
 
 class Agent:
-    def __init__(self, n_actions, gamma, tau, lr, state_shape, capacity, alpha, epsilon_start, epsilon_end,
+    def __init__(self, n_actions, gamma, tau, lr, state_shape, capacity, epsilon_start, epsilon_end,
                  epsilon_decay, batch_size):
         self.n_actions = n_actions
         self.gamma = gamma

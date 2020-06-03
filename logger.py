@@ -14,7 +14,7 @@ global_running_l = []
 episodes_rewards = []
 
 
-class LOG:
+class Logger:
     simulation_steps = 0
 
     def __init__(self):
@@ -41,7 +41,7 @@ class LOG:
     def off(self):
         self.duration = time.time() - self.start_time
 
-    def printer(self, *args, **kwargs):
+    def print(self, *args, **kwargs):
 
         self.episode, episode_reward, loss, eps_threshold, self.steps = args
         episodes_rewards.append(episode_reward)

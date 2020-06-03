@@ -1,5 +1,5 @@
 import gym
-from logger import LOG
+from logger import Logger
 from play import Play
 from agent import Agent
 from utils import *
@@ -10,7 +10,7 @@ MAX_STEPS = 1000
 save_interval = 200
 log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
 
-episode_log = LOG()
+logger = Logger()
 
 TRAIN = True
 
@@ -25,7 +25,6 @@ if __name__ == '__main__':
                   tau=0.001,
                   state_shape=[84, 84, 4],
                   capacity=10000,
-                  alpha=0.99,
                   epsilon_start=0.9,
                   epsilon_end=0.05,
                   epsilon_decay=200,
@@ -38,7 +37,7 @@ if __name__ == '__main__':
             episode_reward = 0
             episode_loss = 0
 
-            episode_log.on()
+            logger.on()
 
             for step in range(1, MAX_STEPS + 1):
 
@@ -62,15 +61,15 @@ if __name__ == '__main__':
                 if d:
                     break
 
-            episode_log.off()
+            logger.off()
             if episode % log_interval == 0:
-                episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
+                logger.print(episode, episode_reward, episode_loss, agent.eps_threshold, step)
             agent.update_epsilon()
     else:
         episode = MAX_EPISODES
         step = MAX_STEPS
         # region play
-        play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
+        play_path = "./models/" + logger.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
         player = Play(agent, env, play_path)
         player.evaluate()
         # endregion
