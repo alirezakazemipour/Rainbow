@@ -3,35 +3,33 @@ from logger import Logger
 from play import Play
 from agent import Agent
 from utils import *
+from config import get_params
 
-ENV_NAME = "Breakout-v0"
-MAX_EPISODES = 20
-MAX_STEPS = 1000
-save_interval = 200
-log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
+params = get_params()
+
+test_env = gym.make(params["env_name"])
+n_actions = test_env.action_space.n
+max_steps = test_env._max_episode_steps
+
+save_interval = params["save_interval"]
+log_interval = params["log_interval"]  # TODO has conflicts with save interval when loading for playing is needed
 
 logger = Logger()
 
-TRAIN = True
 
 if __name__ == '__main__':
 
-    env = gym.make(ENV_NAME)
-    n_actions = env.action_space.n
+    env = gym.make(params["env_name"])
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions,
-                  gamma=0.99,
-                  lr=6.25e-5,
-                  tau=0.001,
                   state_shape=[84, 84, 4],
-                  capacity=10000,
                   epsilon_start=0.9,
                   epsilon_end=0.05,
                   epsilon_decay=200,
-                  batch_size=32)
-    if TRAIN:
+                  **params)
+    if params["do_train"]:
 
-        for episode in range(1, MAX_EPISODES + 1):
+        for episode in range(1, params["max_episodes"] + 1):
             s = env.reset()
             stacked_frames = stack_frames(stacked_frames, s, True)
             episode_reward = 0
@@ -39,7 +37,7 @@ if __name__ == '__main__':
 
             logger.on()
 
-            for step in range(1, MAX_STEPS + 1):
+            for step in range(1, max_steps + 1):
 
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
@@ -66,8 +64,8 @@ if __name__ == '__main__':
                 logger.print(episode, episode_reward, episode_loss, agent.eps_threshold, step)
             agent.update_epsilon()
     else:
-        episode = MAX_EPISODES
-        step = MAX_STEPS
+        episode = params["max_episodes"]
+        step = max_steps
         # region play
         play_path = "./models/" + logger.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
         player = Play(agent, env, play_path)

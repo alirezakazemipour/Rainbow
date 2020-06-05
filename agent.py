@@ -15,14 +15,11 @@ TRAIN_FROM_SCRATCH = True
 
 
 class Agent:
-    def __init__(self, n_actions, gamma, tau, lr, state_shape, capacity, epsilon_start, epsilon_end,
-                 epsilon_decay, batch_size):
+    def __init__(self, n_actions, state_shape, epsilon_start, epsilon_end,
+                 epsilon_decay, **config):
         self.n_actions = n_actions
-        self.gamma = gamma
-        self.tau = tau
-        self.lr = lr
+        self.config = config
         self.state_shape = state_shape
-        self.batch_size = batch_size
         self.update_count = 0
         self.eps_threshold = 1
 
@@ -39,8 +36,8 @@ class Agent:
         self.loss_fn = nn.MSELoss()
         # self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
-        self.optimizer = Adam(self.eval_model.parameters(), lr=self.lr)
-        self.memory = ReplayMemory(capacity)
+        self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"])
+        self.memory = ReplayMemory(self.config["mem_size"])
 
         self.epsilon_start = epsilon_start
         self.epsilon_end = epsilon_end
@@ -92,10 +89,10 @@ class Agent:
 
         batch = Transition(*zip(*batch))
 
-        states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.state_shape)
+        states = torch.cat(batch.state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         actions = torch.cat(batch.action).to(self.device)
         rewards = torch.cat(batch.reward).to(self.device)
-        next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.state_shape)
+        next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         dones = torch.cat(batch.done).to(self.device)
         states = states.permute(dims=[0, 3, 2, 1])
         actions = actions.view((-1, 1))
@@ -103,9 +100,9 @@ class Agent:
         return states, actions, rewards, next_states, dones
 
     def train(self):
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < self.config["batch_size"]:
             return 0  # as no loss
-        batch = self.memory.sample(self.batch_size)
+        batch = self.memory.sample(self.config["batch_size"])
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
         x = states
@@ -116,11 +113,11 @@ class Agent:
             q_eval_next = self.eval_model(next_states).detach()
             max_action = torch.argmax(q_eval_next, dim=-1)
 
-            batch_indices = torch.arange(end=self.batch_size, dtype=torch.int32)
+            batch_indices = torch.arange(end=self.config["batch_size"], dtype=torch.int32)
             target_value = q_next[batch_indices.long(), max_action] * (1 - dones)
 
-            q_target = rewards + self.gamma * target_value
-        loss = self.loss_fn(q_eval, q_target.view(self.batch_size, 1))
+            q_target = rewards + self.config["gamma"] * target_value
+        loss = self.loss_fn(q_eval, q_target.view(self.config["batch_size"], 1))
 
         self.optimizer.zero_grad()
         loss.backward()
