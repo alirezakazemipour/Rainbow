@@ -25,7 +25,7 @@ if __name__ == '__main__':
                   state_shape=[84, 84, 4],
                   epsilon_start=0.9,
                   epsilon_end=0.05,
-                  epsilon_decay=200,
+                  epsilon_decay=500,
                   **params)
     if params["do_train"]:
 
@@ -45,11 +45,8 @@ if __name__ == '__main__':
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
 
-                agent.multi_step_buffer.append((stacked_frames_copy, action, r, stacked_frames))
-
-                if len(agent.multi_step_buffer) > params["multi_step_n"]:
-                    n_return = sum([agent.multi_step_buffer[i][2] * (params["gamma"] ** i) for i in range(params["multi_step_n"])])
-                    stacked_frames_copy, action, _, _ = agent.multi_step_buffer.pop(0)
+                stacked_frames_copy, action, r, stacked_frames = \
+                    agent.multi_step_returns(stacked_frames_copy, action, r, stacked_frames)
 
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()

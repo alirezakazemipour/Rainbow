@@ -147,7 +147,7 @@ class Agent:
         self.multi_step_buffer.append((state, action, reward, nex_state))
 
         if len(self.multi_step_buffer) < self.config["multi_step_n"]:
-            return
+            return state, action, reward, nex_state
 
         R = sum(
             [self.multi_step_buffer[i][2] * (self.config["gamma"] ** i) for i in range(self.config["multi_step_n"])])
