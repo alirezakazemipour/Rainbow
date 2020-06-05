@@ -5,7 +5,7 @@ def get_params():
     parser = argparse.ArgumentParser(description="Parameters based on the Rainbow paper")
     parser.add_argument("--lr", default=6.25e-5, type=float, help="The learning rate")
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
-    parser.add_argument("--mem_size", default=32, type=int, help="The memory size")
+    parser.add_argument("--mem_size", default=10000, type=int, help="The memory size")
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=100, type=int, help="Maximum number of episodes to train the agent")
