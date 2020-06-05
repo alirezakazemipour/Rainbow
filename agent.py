@@ -5,7 +5,6 @@ from torch.optim.adam import Adam
 from logger import Logger
 import numpy as np
 from collections import deque
-
 from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
@@ -21,7 +20,6 @@ class Agent:
         self.n_actions = n_actions
         self.config = config
         self.state_shape = state_shape
-        self.update_count = 0
         self.eps_threshold = 1
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,7 +33,7 @@ class Agent:
             pass
 
         self.loss_fn = nn.MSELoss()
-        # self.target_model.load_state_dict(self.eval_model.state_dict())
+        self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"])
         self.memory = ReplayMemory(self.config["mem_size"])
@@ -130,15 +128,14 @@ class Agent:
 
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)
+        # torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)
 
         # for param in self.Qnet.parameters():
         #     param.grad.data.clamp_(-1, 1)
 
         self.optimizer.step()
-        self.update_count += 1
         var = loss.detach().cpu().numpy()
-        self.soft_update_of_target_network(self.eval_model, self.target_model)
+        self.soft_update_of_target_network(self.eval_model, self.target_model, self.config["tau"])
 
         return var
 
