@@ -25,7 +25,7 @@ if __name__ == '__main__':
                   state_shape=[84, 84, 4],
                   epsilon_start=0.9,
                   epsilon_end=0.05,
-                  epsilon_decay=500,
+                  epsilon_decay=2000,
                   **params)
     if params["do_train"]:
 
@@ -43,11 +43,7 @@ if __name__ == '__main__':
                 action = agent.choose_action(stacked_frames_copy)
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
-                r = np.clip(r, -1.0, 1.0)
-
-                stacked_frames_copy, action, r, stacked_frames = \
-                    agent.multi_step_returns(stacked_frames_copy, action, r, stacked_frames)
-
+                # r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if step % params["train_period"] == 0:

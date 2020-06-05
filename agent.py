@@ -4,6 +4,7 @@ from model import Model
 from torch.optim.adam import Adam
 from logger import Logger
 import numpy as np
+from collections import deque
 
 from replay_memory import ReplayMemory, Transition
 
@@ -45,7 +46,7 @@ class Agent:
         self.epsilon = self.epsilon_start
 
         self.steps = 0
-        self.multi_step_buffer = []
+        self.multi_step_buffer = deque(maxlen=self.config["multi_step_n"])
 
     def choose_action(self, state):
 
@@ -69,6 +70,13 @@ class Agent:
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
+
+        self.multi_step_buffer.append((state, action, reward, next_state, done))
+        if len(self.multi_step_buffer) < self.config["multi_step_n"]:
+            return
+
+        reward, next_state, done = self.multi_step_returns()
+        state, action, _, _, _ = self.multi_step_buffer.pop()
 
         state = from_numpy(state).float().to('cpu')
         reward = torch.Tensor([reward])
@@ -143,15 +151,14 @@ class Agent:
         self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
                              np.exp(-1. * self.steps / self.epsilon_decay)
 
-    def multi_step_returns(self, state, action, reward, nex_state):
-        self.multi_step_buffer.append((state, action, reward, nex_state))
+    def multi_step_returns(self):
 
-        if len(self.multi_step_buffer) < self.config["multi_step_n"]:
-            return state, action, reward, nex_state
+        reward, next_state, done = self.multi_step_buffer[-1][-3:]
 
-        R = sum(
-            [self.multi_step_buffer[i][2] * (self.config["gamma"] ** i) for i in range(self.config["multi_step_n"])])
-        state, action, _, _ = self.multi_step_buffer.pop(0)
-        # print("R:", R)
-        return state, action, R, nex_state
+        for transition in reversed(list(self.multi_step_buffer)[:-1]):
+            r, n_o, d = transition[-3:]
 
+            reward = r + self.config["gamma"] * reward * (1 - d)
+            next_obs, done = (n_o, d) if d else (next_state, done)
+
+        return reward, next_state, done

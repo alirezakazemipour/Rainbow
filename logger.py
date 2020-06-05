@@ -75,15 +75,15 @@ class Logger:
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        print("Episode:{:3d}| "
-              "Episode_Reward:{:3.3f}| "
-              "Episode_Running_r:{:3.3f}| "
-              "Episode_Running_loss:{:3.3f}| "
-              "Episode Duration:{:3.3f}| "
-              "Episode loss:{:3.3f}| "
-              "eps_threshold:{:3.3f}| "
-              "step:{:3d}| "
-              "mean steps time:{:3.3f}| "
+        print("Episode:{} |"
+              "Episode_Reward:{:3.3f} |"
+              "Episode_Running_r:{:3.3f} |"
+              "Episode_Running_loss:{:3.3f} |"
+              "Episode Duration:{:3.3f} |"
+              "Episode loss:{:3.3f} |"
+              "eps_threshold:{:3.3f} |"
+              "step:{} |"
+              "mean steps time:{:3.3f} |"
               "{:.1f}/{:.1f} GB RAM".format(self.episode,
                                             episode_reward,
                                             global_running_r[-1],
