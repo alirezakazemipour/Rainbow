@@ -44,6 +44,13 @@ if __name__ == '__main__':
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
+
+                agent.multi_step_buffer.append((stacked_frames_copy, action, r, stacked_frames))
+
+                if len(agent.multi_step_buffer) > params["multi_step_n"]:
+                    n_return = sum([agent.multi_step_buffer[i][2] * (params["gamma"] ** i) for i in range(params["multi_step_n"])])
+                    stacked_frames_copy, action, _, _ = agent.multi_step_buffer.pop(0)
+
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if step % params["train_period"] == 0:

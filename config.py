@@ -4,6 +4,8 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="Parameters based on the Rainbow paper")
     parser.add_argument("--lr", default=6.25e-5, type=float, help="The learning rate")
+    parser.add_argument("--multi_step_n", default=3, type=int, help="The number of step to take account for"
+                                                                    "multi step learning")
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
     parser.add_argument("--mem_size", default=10000, type=int, help="The memory size")
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")

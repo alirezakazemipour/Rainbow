@@ -45,6 +45,7 @@ class Agent:
         self.epsilon = self.epsilon_start
 
         self.steps = 0
+        self.multi_step_buffer = []
 
     def choose_action(self, state):
 
@@ -141,3 +142,16 @@ class Agent:
     def update_epsilon(self):
         self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
                              np.exp(-1. * self.steps / self.epsilon_decay)
+
+    def multi_step_returns(self, state, action, reward, nex_state):
+        self.multi_step_buffer.append((state, action, reward, nex_state))
+
+        if len(self.multi_step_buffer) < self.config["multi_step_n"]:
+            return
+
+        R = sum(
+            [self.multi_step_buffer[i][2] * (self.config["gamma"] ** i) for i in range(self.config["multi_step_n"])])
+        state, action, _, _ = self.multi_step_buffer.pop(0)
+        # print("R:", R)
+        return state, action, R, nex_state
+
