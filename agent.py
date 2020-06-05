@@ -125,7 +125,7 @@ class Agent:
             batch_indices = torch.arange(end=self.config["batch_size"], dtype=torch.int32)
             target_value = q_next[batch_indices.long(), max_action] * (1 - dones)
 
-            q_target = rewards + self.config["gamma"] * target_value
+            q_target = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * target_value
         loss = self.loss_fn(q_eval, q_target.view(self.config["batch_size"], 1))
 
         self.optimizer.zero_grad()
