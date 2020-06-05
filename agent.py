@@ -156,9 +156,9 @@ class Agent:
         reward, next_state, done = self.multi_step_buffer[-1][-3:]
 
         for transition in reversed(list(self.multi_step_buffer)[:-1]):
-            r, n_o, d = transition[-3:]
+            r, n_s, d = transition[-3:]
 
             reward = r + self.config["gamma"] * reward * (1 - d)
-            next_obs, done = (n_o, d) if d else (next_state, done)
+            next_state, done = (n_s, d) if d else (next_state, done)
 
         return reward, next_state, done
