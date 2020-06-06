@@ -43,7 +43,7 @@ class Logger:
 
     def print(self, *args, **kwargs):
 
-        self.episode, episode_reward, loss, eps_threshold, self.steps = args
+        self.episode, episode_reward, loss, eps_threshold, self.steps, memory_length = args
         episodes_rewards.append(episode_reward)
 
         self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -83,6 +83,7 @@ class Logger:
               "Episode loss:{:3.3f}| "
               "eps_threshold:{:3.3f}| "
               "step:{}| "
+              "Memory_length:{}| "
               "mean steps time:{:3.3f}| "
               "{:.1f}/{:.1f} GB RAM".format(self.episode,
                                             episode_reward,
@@ -92,6 +93,7 @@ class Logger:
                                             loss,  # TODO make loss smooth
                                             eps_threshold,
                                             self.steps,  # it should be in each step not in each episode
+                                            memory_length,
                                             self.duration / self.steps,
                                             to_gb(memory.used),
                                             to_gb(memory.total)

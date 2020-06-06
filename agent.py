@@ -35,6 +35,7 @@ class Agent:
         self.loss_fn = nn.MSELoss()
         self.target_model.load_state_dict(self.eval_model.state_dict())
         self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
+        
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"])
         self.memory = ReplayMemory(self.config["mem_size"])
 

@@ -24,8 +24,8 @@ if __name__ == '__main__':
     agent = Agent(n_actions=n_actions,
                   state_shape=[84, 84, 4],
                   epsilon_start=0.9,
-                  epsilon_end=0.05,
-                  epsilon_decay=2000,
+                  epsilon_end=0.01,
+                  epsilon_decay=3000,
                   **params)
     if params["do_train"]:
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
             logger.off()
             if episode % log_interval == 0:
-                logger.print(episode, episode_reward, episode_loss, agent.eps_threshold, step)
+                logger.print(episode, episode_reward, episode_loss, agent.eps_threshold, step, len(agent.memory))
             agent.update_epsilon()
     else:
         episode = params["max_episodes"]
