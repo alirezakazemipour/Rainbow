@@ -41,7 +41,7 @@ class Agent:
             # Load weights and other params
             pass
 
-        self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"])
+        self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
         self.memory = ReplayMemory(self.config["mem_size"])
 
         self.epsilon_start = epsilon_start
@@ -148,7 +148,9 @@ class Agent:
 
         self.optimizer.step()
         var = dqn_loss.detach().cpu().numpy()
-        self.soft_update_of_target_network(self.eval_model, self.target_model, self.config["tau"])
+        # self.soft_update_of_target_network(self.eval_model, self.target_model, self.config["tau"])
+        if self.steps % 1000 == 0:
+        	self.hard_update_of_target_network()
 
         return var
 

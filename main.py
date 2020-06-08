@@ -43,12 +43,12 @@ if __name__ == '__main__':
                 action = agent.choose_action(stacked_frames_copy)
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
-                # r = np.clip(r, -1.0, 1.0)
+                r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if step % params["train_period"] == 0:
-                    loss = agent.train()
-                    episode_loss += loss
+	                loss = agent.train()
+	                episode_loss += loss
                 else:
                     episode_loss += 0
                 episode_reward += r

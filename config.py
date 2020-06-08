@@ -9,7 +9,7 @@ def get_params():
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
     parser.add_argument("--mem_size", default=12000, type=int, help="The memory size")
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")
-    parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
+    parser.add_argument("--tau", default=0.05, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=10000, type=int, help="Maximum number of episodes to train the agent")
     parser.add_argument("--env_name", default="Pong-v0", type=str, help="Name of the environment")
     parser.add_argument("--log_interval", default=1, type=int,
@@ -28,5 +28,6 @@ def get_params():
                                                               "the distributional algorithm")
     parser.add_argument("--N_atoms", default=51, type=int, help="Number of atoms to predict the value distribution in"
                                                                 "the distributional algorithm")
+    parser.add_argument("--adam_eps", default=1.5e-4, type=float, help="The Adam epsilon")
     params = parser.parse_args()
     return vars(params)
