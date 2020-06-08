@@ -19,23 +19,28 @@ class Agent:
                  epsilon_decay, **config):
         self.n_actions = n_actions
         self.config = config
+        self.batch_size = self.config["batch_size"]
         self.state_shape = state_shape
         self.eps_threshold = 1
-
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.eval_model = Model(self.state_shape, self.n_actions).to(self.device)
-        self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
+        self.n_step_buffer = deque(maxlen=self.config["multi_step_n"])
+        self.v_min = self.config["V_min"]
+        self.v_max = self.config["V_max"]
+        self.n_atoms = self.config["N_atoms"]
+        self.support = torch.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
+        self.delta_z = (self.v_max - self.v_min) / (self.n_atoms - 1)
+
+        self.eval_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
+        self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
+        self.target_model.load_state_dict(self.eval_model.state_dict())
+        self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
 
         if not TRAIN_FROM_SCRATCH:
             # TODO
             # Load weights and other params
             pass
 
-        self.loss_fn = nn.MSELoss()
-        self.target_model.load_state_dict(self.eval_model.state_dict())
-        self.target_model.eval()  # Sets batchnorm and droupout for evaluation not training
-        
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"])
         self.memory = ReplayMemory(self.config["mem_size"])
 
@@ -52,7 +57,7 @@ class Agent:
         if np.random.random() > self.eps_threshold:
             with torch.no_grad():
                 state = torch.unsqueeze(from_numpy(state).float().to(self.device), dim=0)
-                action = self.eval_model(
+                action = self.eval_model.get_q_value(
                     state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
 
         else:
@@ -65,7 +70,7 @@ class Agent:
     def get_action(self, state):
         state = from_numpy(state).float().to(self.device)
         state = torch.unsqueeze(state, dim=0)
-        return self.eval_model(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
+        return self.eval_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
@@ -99,9 +104,9 @@ class Agent:
 
         states = torch.cat(batch.state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         actions = torch.cat(batch.action).to(self.device)
-        rewards = torch.cat(batch.reward).to(self.device)
+        rewards = torch.cat(batch.reward).to(self.device).view((-1, 1))
         next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
-        dones = torch.cat(batch.done).to(self.device)
+        dones = torch.cat(batch.done).to(self.device).view((-1, 1))
         states = states.permute(dims=[0, 3, 2, 1])
         actions = actions.view((-1, 1))
         next_states = next_states.permute(dims=[0, 3, 2, 1])
@@ -113,29 +118,36 @@ class Agent:
         batch = self.memory.sample(self.config["batch_size"])
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
-        x = states
-        q_eval = self.eval_model(x).gather(dim=1, index=actions)
         with torch.no_grad():
-            q_next = self.target_model(next_states)
+            q_eval_next = self.eval_model.get_q_value(next_states)
+            next_actions = q_eval_next.argmax(dim=-1)
+            q_next = self.target_model(next_states)[range(self.batch_size), next_actions.long()]
 
-            q_eval_next = self.eval_model(next_states)
-            max_action = torch.argmax(q_eval_next, dim=-1)
+            projected_atoms = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * self.support * (1 - dones)
+            projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
 
-            batch_indices = torch.arange(end=self.config["batch_size"], dtype=torch.int32)
-            target_value = q_next[batch_indices.long(), max_action] * (1 - dones)
+            b = (projected_atoms - self.v_min) / self.delta_z
+            lower_bound = b.floor().long()
+            upper_bound = b.ceil().long()
 
-            q_target = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * target_value
-        loss = self.loss_fn(q_eval, q_target.view(self.config["batch_size"], 1))
+            projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
+            for i in range(self.batch_size):
+                for j in range(self.n_atoms):
+                    projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
+                    projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
+
+        eval_dist = self.eval_model(states)[range(self.batch_size), actions.squeeze().long()]
+        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1).mean()
 
         self.optimizer.zero_grad()
-        loss.backward()
+        dqn_loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)
 
         # for param in self.Qnet.parameters():
         #     param.grad.data.clamp_(-1, 1)
 
         self.optimizer.step()
-        var = loss.detach().cpu().numpy()
+        var = dqn_loss.detach().cpu().numpy()
         self.soft_update_of_target_network(self.eval_model, self.target_model, self.config["tau"])
 
         return var
