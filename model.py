@@ -24,21 +24,21 @@ class Model(nn.Module):
         linear_input_size = convw * convh * 64
 
         self.adv_fc = nn.Linear(linear_input_size, 512)
-        self.v_fc = nn.Linear(linear_input_size, 512)
-        self.adv_value = nn.Linear(512, n_actions)
-        self.s_value = nn.Linear(512, 1)
+        self.value_fc = nn.Linear(linear_input_size, 512)
+        self.adv = nn.Linear(512, n_actions)
+        self.value = nn.Linear(512, 1)
 
         nn.init.kaiming_normal_(self.adv_fc.weight)
         self.adv_fc.bias.detach().zero_()
 
-        nn.init.kaiming_normal_(self.v_fc.weight)
-        self.v_fc.bias.detach().zero_()
+        nn.init.kaiming_normal_(self.value_fc.weight)
+        self.value_fc.bias.detach().zero_()
 
-        nn.init.xavier_normal_(self.adv_value.weight)
-        self.adv_value.bias.detach().zero_()
+        nn.init.xavier_uniform_(self.adv.weight)
+        self.adv.bias.detach().zero_()
 
-        nn.init.xavier_normal_(self.s_value.weight)
-        self.s_value.bias.detach().zero_()
+        nn.init.xavier_uniform_(self.value.weight)
+        self.value.bias.detach().zero_()
 
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
@@ -54,9 +54,9 @@ class Model(nn.Module):
         x = F.relu(self.conv3(x))
         x = x.view(x.size(0), -1)
         adv_fc = F.relu(self.adv_fc(x))
-        v_fc = F.relu(self.v_fc(x))
-        adv_value = self.adv_value(adv_fc)
-        s_value = self.s_value(v_fc)
+        value_fc = F.relu(self.value_fc(x))
+        adv = self.adv(adv_fc)
+        value = self.value(value_fc)
 
-        x = s_value + adv_value - adv_value.mean(1, keepdim=True)
-        return x
+        q_value = value + adv - adv.mean(1, keepdim=True)
+        return q_value

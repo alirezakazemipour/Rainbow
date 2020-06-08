@@ -116,9 +116,9 @@ class Agent:
         x = states
         q_eval = self.eval_model(x).gather(dim=1, index=actions)
         with torch.no_grad():
-            q_next = self.target_model(next_states).detach()
+            q_next = self.target_model(next_states)
 
-            q_eval_next = self.eval_model(next_states).detach()
+            q_eval_next = self.eval_model(next_states)
             max_action = torch.argmax(q_eval_next, dim=-1)
 
             batch_indices = torch.arange(end=self.config["batch_size"], dtype=torch.int32)
