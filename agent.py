@@ -20,7 +20,6 @@ class Agent:
         self.config = config
         self.batch_size = self.config["batch_size"]
         self.state_shape = state_shape
-        self.eps_threshold = 1
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.n_step_buffer = deque(maxlen=self.config["multi_step_n"])

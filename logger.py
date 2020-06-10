@@ -43,7 +43,7 @@ class Logger:
 
     def print(self, *args, **kwargs):
 
-        self.episode, episode_reward, loss, eps_threshold, self.steps, memory_length = args
+        self.episode, episode_reward, loss, self.steps, memory_length = args
         episodes_rewards.append(episode_reward)
 
         self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -75,23 +75,23 @@ class Logger:
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        print("Episode:{}| "
-              "Episode_Reward:{:3.3f}| "
-              "Episode_Running_r:{:3.3f}| "
-              "Episode_Running_loss:{:3.3f}| "
-              "Episode Duration:{:3.3f}| "
-              "Episode loss:{:3.3f}| "
-              "eps_threshold:{:3.3f}| "
-              "step:{}| "
+        print("EP:{}| "
+              "EP_Reward:{:3.3f}| "
+              "EP_Running_Reward:{:3.3f}| "
+              "EP_Running_loss:{:3.3f}| "
+              "EP Duration:{:3.3f}| "
+              "EP_loss:{:3.3f}| "
+              # "eps_threshold:{:3.3f}| "
+              "Step:{}| "
               "Memory_length:{}| "
-              "mean steps time:{:3.3f}| "
+              "Mean_steps_time:{:3.3f}| "
               "{:.1f}/{:.1f} GB RAM".format(self.episode,
                                             episode_reward,
                                             global_running_r[-1],
                                             global_running_l[-1],
                                             self.duration,
                                             loss,  # TODO make loss smooth
-                                            eps_threshold,
+                                            # eps_threshold,
                                             self.steps,  # it should be in each step not in each episode
                                             memory_length,
                                             self.duration / self.steps,

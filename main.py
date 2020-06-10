@@ -57,8 +57,8 @@ if __name__ == '__main__':
 
             logger.off()
             if episode % log_interval == 0:
-                logger.print(episode, episode_reward, episode_loss, agent.eps_threshold, step, len(agent.memory))
-            agent.update_epsilon()
+                logger.print(episode, episode_reward, episode_loss, step, len(agent.memory))
+                
     else:
         episode = params["max_episodes"]
         step = max_steps
