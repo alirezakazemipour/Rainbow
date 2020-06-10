@@ -15,8 +15,7 @@ TRAIN_FROM_SCRATCH = True
 
 
 class Agent:
-    def __init__(self, n_actions, state_shape, epsilon_start, epsilon_end,
-                 epsilon_decay, **config):
+    def __init__(self, n_actions, state_shape, **config):
         self.n_actions = n_actions
         self.config = config
         self.batch_size = self.config["batch_size"]
@@ -44,24 +43,16 @@ class Agent:
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
         self.memory = ReplayMemory(self.config["mem_size"])
 
-        self.epsilon_start = epsilon_start
-        self.epsilon_end = epsilon_end
-        self.epsilon_decay = epsilon_decay
-        self.epsilon = self.epsilon_start
-
         self.steps = 0
         self.multi_step_buffer = deque(maxlen=self.config["multi_step_n"])
 
     def choose_action(self, state):
 
-        if np.random.random() > self.eps_threshold:
-            with torch.no_grad():
-                state = torch.unsqueeze(from_numpy(state).float().to(self.device), dim=0)
-                action = self.eval_model.get_q_value(
-                    state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
+        with torch.no_grad():
+            state = torch.unsqueeze(from_numpy(state).float().to(self.device), dim=0)
+            action = self.eval_model.get_q_value(
+                state.permute(dims=[0, 3, 2, 1])).argmax(dim=1)[0]
 
-        else:
-            action = torch.randint(low=0, high=self.n_actions, size=(1,), device=self.device)[0]
         self.steps += 1
         Logger.simulation_steps += 1
 
@@ -123,7 +114,8 @@ class Agent:
             next_actions = q_eval_next.argmax(dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), next_actions.long()]
 
-            projected_atoms = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * self.support * (1 - dones)
+            projected_atoms = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * self.support * (
+                        1 - dones)
             projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
@@ -148,9 +140,13 @@ class Agent:
 
         self.optimizer.step()
         var = dqn_loss.detach().cpu().numpy()
+
+        self.target_model.reset()
+        self.eval_model.reset()
+
         # self.soft_update_of_target_network(self.eval_model, self.target_model, self.config["tau"])
         if self.steps % 1000 == 0:
-        	self.hard_update_of_target_network()
+            self.hard_update_of_target_network()
 
         return var
 
@@ -158,10 +154,6 @@ class Agent:
         model_state_dict, _ = Logger.load_weights(path)
         self.eval_model.load_state_dict(model_state_dict)
         self.eval_model.eval()
-
-    def update_epsilon(self):
-        self.eps_threshold = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-                             np.exp(-1. * self.steps / self.epsilon_decay)
 
     def multi_step_returns(self):
 

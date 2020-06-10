@@ -16,16 +16,12 @@ log_interval = params["log_interval"]  # TODO has conflicts with save interval w
 
 logger = Logger()
 
-
 if __name__ == '__main__':
 
     env = gym.make(params["env_name"])
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions,
                   state_shape=[84, 84, 4],
-                  epsilon_start=0.9,
-                  epsilon_end=0.01,
-                  epsilon_decay=3000,
                   **params)
     if params["do_train"]:
 
@@ -47,8 +43,8 @@ if __name__ == '__main__':
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if step % params["train_period"] == 0:
-	                loss = agent.train()
-	                episode_loss += loss
+                    loss = agent.train()
+                    episode_loss += loss
                 else:
                     episode_loss += 0
                 episode_reward += r
