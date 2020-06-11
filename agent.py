@@ -40,7 +40,7 @@ class Agent:
             pass
 
         self.optimizer = Adam(self.eval_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
-        self.memory = ReplayMemory(self.config["mem_size"])
+        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
 
         self.steps = 0
         self.multi_step_buffer = deque(maxlen=self.config["multi_step_n"])
@@ -102,10 +102,11 @@ class Agent:
         next_states = next_states.permute(dims=[0, 3, 2, 1])
         return states, actions, rewards, next_states, dones
 
-    def train(self):
+    def train(self, beta):
         if len(self.memory) < self.config["batch_size"]:
             return 0  # as no loss
-        batch = self.memory.sample(self.config["batch_size"])
+        batch, weights, indices = self.memory.sample(self.batch_size, beta)
+        weights = from_numpy(weights).float().to(self.device)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
         with torch.no_grad():
@@ -128,15 +129,16 @@ class Agent:
                     projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
 
         eval_dist = self.eval_model(states)[range(self.batch_size), actions.squeeze().long()]
-        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1).mean()
+        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1)
+        td_error = dqn_loss.abs()
+        self.memory.update_priorities(indices, td_error.abs().detach().cpu().numpy() + 0.01)
+        dqn_loss = (dqn_loss * weights).mean()
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
-        # torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)
-
+        torch.nn.utils.clip_grad_norm_(self.eval_model.parameters(), 10)
         # for param in self.Qnet.parameters():
         #     param.grad.data.clamp_(-1, 1)
-
         self.optimizer.step()
         var = dqn_loss.detach().cpu().numpy()
 
