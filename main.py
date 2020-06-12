@@ -12,7 +12,6 @@ n_actions = test_env.action_space.n
 max_steps = test_env._max_episode_steps
 
 save_interval = params["save_interval"]
-log_interval = params["log_interval"]  # TODO has conflicts with save interval when loading for playing is needed
 
 logger = Logger()
 
@@ -54,8 +53,7 @@ if __name__ == '__main__':
                     break
 
             logger.off()
-            if episode % log_interval == 0:
-                logger.print(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
+            logger.print(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon, **params)
             agent.update_epsilon()
                 
     else:

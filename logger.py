@@ -43,6 +43,7 @@ class Logger:
 
     def print(self, *args, **kwargs):
 
+        config = kwargs
         self.episode, episode_reward, loss, self.steps, memory_length, epsilon = args
         episodes_rewards.append(episode_reward)
 
@@ -75,29 +76,30 @@ class Logger:
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        print("EP:{}| "
-              "EP_Reward:{:3.3f}| "
-              "EP_Running_Reward:{:3.3f}| "
-              "EP_Running_loss:{:3.3f}| "
-              "EP Duration:{:3.3f}| "
-              "EP_loss:{:3.3f}| "
-              "Step:{}| "
-              "epsilon:{:.3f}| "
-              "Memory_length:{}| "
-              "Mean_steps_time:{:3.3f}| "
-              "{:.1f}/{:.1f} GB RAM".format(self.episode,
-                                            episode_reward,
-                                            global_running_r[-1],
-                                            global_running_l[-1],
-                                            self.duration,
-                                            loss,  # TODO make loss smooth
-                                            self.steps,  # it should be in each step not in each episode
-                                            epsilon,
-                                            memory_length,
-                                            self.duration / self.steps,
-                                            to_gb(memory.used),
-                                            to_gb(memory.total)
-                                            ))
+        if self.episode % config["print_interval"] == 0:
+            print("EP:{}| "
+                  "EP_Reward:{:3.3f}| "
+                  "EP_Running_Reward:{:3.3f}| "
+                  "EP_Running_loss:{:3.3f}| "
+                  "EP Duration:{:3.3f}| "
+                  "EP_loss:{:3.3f}| "
+                  "Step:{}| "
+                  "Epsilon:{:.3f}| "
+                  "Memory_length:{}| "
+                  "Mean_steps_time:{:3.3f}| "
+                  "{:.1f}/{:.1f} GB RAM".format(self.episode,
+                                                episode_reward,
+                                                global_running_r[-1],
+                                                global_running_l[-1],
+                                                self.duration,
+                                                loss,  # TODO make loss smooth
+                                                self.steps,  # it should be in each step not in each episode
+                                                epsilon,
+                                                memory_length,
+                                                self.duration / self.steps,
+                                                to_gb(memory.used),
+                                                to_gb(memory.total)
+                                                ))
         with SummaryWriter("./logs/" + self.dir) as writer:
             writer.add_scalar("Loss", loss, self.simulation_steps)
             writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)

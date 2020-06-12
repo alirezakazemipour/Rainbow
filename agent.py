@@ -4,7 +4,6 @@ from model import Model
 from torch.optim.adam import Adam
 from logger import Logger
 import numpy as np
-from collections import deque
 from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
@@ -44,7 +43,8 @@ class Agent:
         else:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).float().to(self.device)
-            action = self.online_model(state.permute([0, 3, 1, 2])).max(-1)[0]
+            with torch.no_grad():
+                action = self.online_model(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
         self.steps += 1
         Logger.simulation_steps += 1
@@ -80,9 +80,9 @@ class Agent:
         rewards = torch.cat(batch.reward).to(self.device).view((-1, 1))
         next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         dones = torch.cat(batch.done).to(self.device).view((-1, 1))
-        states = states.permute(dims=[0, 3, 2, 1])
+        states = states.permute(dims=[0, 3, 1, 2])
         actions = actions.view((-1, 1))
-        next_states = next_states.permute(dims=[0, 3, 2, 1])
+        next_states = next_states.permute(dims=[0, 3, 1, 2])
         return states, actions, rewards, next_states, dones
 
     def train(self):
@@ -102,6 +102,7 @@ class Agent:
         dqn_loss.backward()
         self.optimizer.step()
 
+        self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, path):
