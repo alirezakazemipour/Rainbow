@@ -111,5 +111,5 @@ class Agent:
         self.online_model.eval()
 
     def update_epsilon(self):
-        self.epsilon = self.epsilon - self.decay_rate if self.epsilon + self.decay_rate > self.min_epsilon \
+        self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
             else self.min_epsilon

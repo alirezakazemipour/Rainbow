@@ -7,7 +7,7 @@ def get_params():
     parser.add_argument("--multi_step_n", default=3, type=int,
                         help="The number of step to take account formulti step learning")
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
-    parser.add_argument("--mem_size", default=12000, type=int, help="The memory size")
+    parser.add_argument("--mem_size", default=10000, type=int, help="The memory size")
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=10000, type=int, help="Maximum number of episodes to train the agent")
@@ -31,7 +31,7 @@ def get_params():
     parser.add_argument("--alpha", default=0.6, type=float, help="The aggressiveness parameter of PER")
     parser.add_argument("--beta", default=0.4, type=float, help="The robustness parameter of PER")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration probability")
-    parser.add_argument("--decay_rate", default=2e-2, type=float, help="Decay rate of the exploration probability")
+    parser.add_argument("--decay_rate", default=5e-2, type=float, help="Decay rate of the exploration probability")
     parser.add_argument("--min_epsilon", default=0.01, type=float, help="Minimum probability of exploration")
 
     params = parser.parse_args()
