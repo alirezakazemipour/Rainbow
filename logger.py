@@ -5,6 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 import datetime
 import torch
 import os
+import datetime
 
 moving_avg = False
 
@@ -81,25 +82,27 @@ class Logger:
                   "EP_Reward:{:3.3f}| "
                   "EP_Running_Reward:{:3.3f}| "
                   "EP_Running_loss:{:3.3f}| "
-                  "EP Duration:{:3.3f}| "
+                  "EP_Duration:{:3.3f}| "
                   "EP_loss:{:3.3f}| "
                   "Step:{}| "
                   "Epsilon:{:.3f}| "
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
-                  "{:.1f}/{:.1f} GB RAM".format(self.episode,
-                                                episode_reward,
-                                                global_running_r[-1],
-                                                global_running_l[-1],
-                                                self.duration,
-                                                loss,  # TODO make loss smooth
-                                                self.steps,  # it should be in each step not in each episode
-                                                epsilon,
-                                                memory_length,
-                                                self.duration / self.steps,
-                                                to_gb(memory.used),
-                                                to_gb(memory.total)
-                                                ))
+                  "{:.1f}/{:.1f} GB RAM| "
+                  "f'Time:{}')".format(self.episode,
+                                       episode_reward,
+                                       global_running_r[-1],
+                                       global_running_l[-1],
+                                       self.duration,
+                                       loss,  # TODO make loss smooth
+                                       self.steps,  # it should be in each step not in each episode
+                                       epsilon,
+                                       memory_length,
+                                       self.duration / self.steps,
+                                       to_gb(memory.used),
+                                       to_gb(memory.total),
+                                       datetime.datetime.now().strftime("%H:%M:%S")
+                                       ))
         with SummaryWriter("./logs/" + self.dir) as writer:
             writer.add_scalar("Loss", loss, self.simulation_steps)
             writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
