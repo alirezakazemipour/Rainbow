@@ -12,16 +12,18 @@ moving_avg = False
 global_running_r = 0
 global_running_l = 0
 
+
 # episodes_rewards = []
 
 
 class Logger:
     simulation_steps = 0
 
-    def __init__(self):
+    def __init__(self, **config):
+        self.config = config
         self.moving_avg_window = 5
-        self.dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        self.create_dir(self.dir)
+        self.log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.create_wights_folder()
         self.min_episode_reward = np.inf
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
@@ -29,12 +31,9 @@ class Logger:
         self.save_interval = 10
 
     @staticmethod
-    def create_dir(dir):
-        dir = os.path.join("models/" + dir)
+    def create_wights_folder():
         if not os.path.exists("models"):
             os.mkdir("models")
-        elif not os.path.exists(dir):
-            os.mkdir(dir)
 
     def on(self):
         self.start_time = time.time()
@@ -42,9 +41,8 @@ class Logger:
     def off(self):
         self.duration = time.time() - self.start_time
 
-    def print(self, *args, **kwargs):
+    def log(self, *args, **kwargs):
 
-        config = kwargs
         self.episode, episode_reward, loss, self.steps, memory_length, epsilon = args
         # episodes_rewards.append(episode_reward)
         #
@@ -79,7 +77,7 @@ class Logger:
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        if self.episode % config["print_interval"] == 0:
+        if self.episode % self.config["print_interval"] == 0:
             print("EP:{}| "
                   "EP_Reward:{:3.3f}| "
                   "EP_Running_Reward:{:3.3f}| "
@@ -92,20 +90,20 @@ class Logger:
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
                   "Time:{}".format(self.episode,
-                                       episode_reward,
-                                       global_running_r,
-                                       global_running_l,
-                                       self.duration,
-                                       loss,  # TODO make loss smooth
-                                       self.steps,  # it should be in each step not in each episode
-                                       epsilon,
-                                       memory_length,
-                                       self.duration / self.steps,
-                                       to_gb(memory.used),
-                                       to_gb(memory.total),
-                                       datetime.datetime.now().strftime("%H:%M:%S")
-                                       ))
-        with SummaryWriter("./logs/" + self.dir) as writer:
+                                   episode_reward,
+                                   global_running_r,
+                                   global_running_l,
+                                   self.duration,
+                                   loss,  # TODO make loss smooth
+                                   self.steps,  # it should be in each step not in each episode
+                                   epsilon,
+                                   memory_length,
+                                   self.duration / self.steps,
+                                   to_gb(memory.used),
+                                   to_gb(memory.total),
+                                   datetime.datetime.now().strftime("%H:%M:%S")
+                                   ))
+        with SummaryWriter("./logs/" + self.log_dir) as writer:
             writer.add_scalar("Loss", loss, self.simulation_steps)
             writer.add_scalar("Episode running reward", global_running_r, self.simulation_steps)
             # writer.add_hparams({
@@ -134,19 +132,16 @@ class Logger:
         #                                     to_gb(memory.total)
         #                                     ))
 
-    def save_weights(self, model, optimizer, episode, step):
-        torch.save({"model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "episode": episode,
-                    "step": step},
-                   "./models/" + self.dir + "/" "episode" + str(episode) + "-" + "step" + str(step))
+    def save_weights(self, episode, agent):
+        torch.save({"online_model_state_dict": agent.online_model.state_dict(),
+                    "target_model_state_dict": agent.target_model.state_dict(),
+                    "optimizer_state_dict": agent.optimizer.state_dict(),
+                    "epsilon": agent.epsilon,
+                    "memory": agent.memory,
+                    "n_step_buffer": agent.n_step_buffer,
+                    "episode": episode},
+                   self.config["weights_path"])
 
-    @staticmethod
-    def load_weights(path):
-
-        checkpoint = torch.load(path)
-        model_state_dict = checkpoint["model_state_dict"]
-        optimizer_state_dict = checkpoint["optimizer_state_dict"]
-        _ = checkpoint["episode"]
-        _ = checkpoint["step"]
-        return model_state_dict, optimizer_state_dict
+    def load_weights(self):
+        checkpoint = torch.load(self.config["weights_path"])
+        return checkpoint
