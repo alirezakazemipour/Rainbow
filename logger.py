@@ -9,10 +9,10 @@ import datetime
 
 moving_avg = False
 
-global_running_r = []
-global_running_l = []
+global_running_r = 0
+global_running_l = 0
 
-episodes_rewards = []
+# episodes_rewards = []
 
 
 class Logger:
@@ -46,33 +46,35 @@ class Logger:
 
         config = kwargs
         self.episode, episode_reward, loss, self.steps, memory_length, epsilon = args
-        episodes_rewards.append(episode_reward)
+        # episodes_rewards.append(episode_reward)
+        #
+        # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
+        # self.max_episode_reward = max(self.max_episode_reward, episode_reward)
+        # self.avg_episode_reward = sum(episodes_rewards) / self.episode
+        #
+        # self.avg_steps_reward = episode_reward / self.steps
 
-        self.min_episode_reward = min(self.min_episode_reward, episode_reward)
-        self.max_episode_reward = max(self.max_episode_reward, episode_reward)
-        self.avg_episode_reward = sum(episodes_rewards) / self.episode
+        global global_running_r, global_running_l
 
-        self.avg_steps_reward = episode_reward / self.steps
-
-        if len(global_running_r) == 0:
-            global_running_r.append(episode_reward)
-            global_running_l.append(loss)
+        if global_running_r == 0:
+            global_running_r = episode_reward
+            global_running_l = loss
         else:
-            if moving_avg:
-                if len(global_running_r) < self.moving_avg_window:
-                    global_running_r.append(0.99 * global_running_r[-1] + 0.01 * episode_reward)
-                    global_running_l.append(0.99 * global_running_l[-1] + 0.01 * loss)
-                else:
-                    global_running_r.append(episode_reward)
-                    global_running_l.append(loss)
-                    weights = np.repeat(1.0, self.moving_avg_window) / self.moving_avg_window
-                    *r, = np.convolve(global_running_r[1:], weights, 'valid')
-                    global_running_r[-1], *_ = r
-                    *l, = np.convolve(global_running_l[1:], weights, 'valid')
-                    global_running_l[-1], *_ = l
-            else:
-                global_running_l.append(0.99 * global_running_l[-1] + 0.01 * loss)
-                global_running_r.append(0.99 * global_running_r[-1] + 0.01 * episode_reward)
+            # if moving_avg:
+            #     if len(global_running_r) < self.moving_avg_window:
+            #         global_running_r.append(0.99 * global_running_r[-1] + 0.01 * episode_reward)
+            #         global_running_l.append(0.99 * global_running_l[-1] + 0.01 * loss)
+            #     else:
+            #         global_running_r.append(episode_reward)
+            #         global_running_l.append(loss)
+            #         weights = np.repeat(1.0, self.moving_avg_window) / self.moving_avg_window
+            #         *r, = np.convolve(global_running_r[1:], weights, 'valid')
+            #         global_running_r[-1], *_ = r
+            #         *l, = np.convolve(global_running_l[1:], weights, 'valid')
+            #         global_running_l[-1], *_ = l
+            # else:
+            global_running_l = 0.99 * global_running_l + 0.01 * loss
+            global_running_r = 0.99 * global_running_r + 0.01 * episode_reward
 
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
@@ -89,10 +91,10 @@ class Logger:
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
-                  "f'Time:{}')".format(self.episode,
+                  "Time:{}".format(self.episode,
                                        episode_reward,
-                                       global_running_r[-1],
-                                       global_running_l[-1],
+                                       global_running_r,
+                                       global_running_l,
                                        self.duration,
                                        loss,  # TODO make loss smooth
                                        self.steps,  # it should be in each step not in each episode
@@ -105,7 +107,7 @@ class Logger:
                                        ))
         with SummaryWriter("./logs/" + self.dir) as writer:
             writer.add_scalar("Loss", loss, self.simulation_steps)
-            writer.add_scalar("Episode running reward", global_running_r[-1], self.simulation_steps)
+            writer.add_scalar("Episode running reward", global_running_r, self.simulation_steps)
             # writer.add_hparams({
             #     "lr": 0.005},
             #     {"hparam/loss": loss})
