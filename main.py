@@ -48,7 +48,6 @@ if __name__ == '__main__':
 
                 # if step % save_interval == 0:
                 #     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
-
                 if d:
                     break
 

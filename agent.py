@@ -91,11 +91,15 @@ class Agent:
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
-        q_next = self.target_model(next_states).detach().max(dim=-1)[0].view(self.batch_size, 1)
-
         q_eval = self.online_model(states).gather(dim=-1, index=actions.long())
-        q_target = rewards + self.gamma * q_next * (1 - dones)
+        with torch.no_grad():
+            q_next = self.target_model(next_states)
+            q_eval_next = self.online_model(next_states)
 
+            next_actions = q_eval_next.argmax(dim=-1).view(-1, 1)
+            q_next = q_next.gather(dim=-1, index=next_actions.long())
+
+            q_target = rewards + self.gamma * q_next * (1 - dones)
         dqn_loss = self.loss_fn(q_eval, q_target)
 
         self.optimizer.zero_grad()
