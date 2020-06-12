@@ -5,6 +5,7 @@ from torch.optim.adam import Adam
 from logger import Logger
 import numpy as np
 from replay_memory import ReplayMemory, Transition
+from collections import deque
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
@@ -35,6 +36,8 @@ class Agent:
 
         self.steps = 0
 
+        self.n_step_buffer = deque(maxlen=self.config["multi_step_n"])
+
     def choose_action(self, state):
 
         if np.random.random() < self.epsilon:
@@ -52,6 +55,12 @@ class Agent:
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
+
+        self.n_step_buffer.append((state, action, reward, next_state, done))
+        if len(self.n_step_buffer) < self.config["multi_step_n"]:
+            return
+        reward, next_state, done = self.n_step_returns()
+        state, action, _, _, _ = self.n_step_buffer.pop()
 
         state = from_numpy(state).float().to('cpu')
         reward = torch.Tensor([reward])
@@ -85,7 +94,7 @@ class Agent:
         return states, actions, rewards, next_states, dones
 
     def train(self):
-        if len(self.memory) < 1000:
+        if len(self.memory) < 1000: # to reduce correlation
             return 0  # as no loss
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
@@ -98,7 +107,7 @@ class Agent:
             next_actions = q_eval_next.argmax(dim=-1).view(-1, 1)
             q_next = q_next.gather(dim=-1, index=next_actions.long())
 
-            q_target = rewards + self.gamma * q_next * (1 - dones)
+            q_target = rewards + (self.gamma ** self.config["multi_step_n"]) * q_next * (1 - dones)
         dqn_loss = self.loss_fn(q_eval, q_target)
 
         self.optimizer.zero_grad()
@@ -116,3 +125,14 @@ class Agent:
     def update_epsilon(self):
         self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
             else self.min_epsilon
+
+    def n_step_returns(self):
+        reward, next_state, done = self.n_step_buffer[-1][-3:]
+
+        for transition in reversed(list(self.n_step_buffer)[:-1]):
+            r, n_s, d = transition[-3:]
+
+            reward = r + self.gamma * reward * (1 - d)
+            next_state, done = (n_s, d) if d else (next_state, done)
+
+        return reward, next_state, done
