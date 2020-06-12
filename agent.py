@@ -8,8 +8,7 @@ from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
-torch.cuda.empty_cache()
-
+    torch.cuda.empty_cache()
 
 
 class Agent:
