@@ -1,7 +1,6 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-import math
 
 
 def conv2d_size_out(size, kernel_size=5, stride=2):
@@ -9,13 +8,11 @@ def conv2d_size_out(size, kernel_size=5, stride=2):
 
 
 class Model(nn.Module):
-    def __init__(self, state_shape, n_actions, n_atoms, support):
+    def __init__(self, state_shape, n_actions):
         super(Model, self).__init__()
         width, height, channel = state_shape
         self.n_actions = n_actions
         self.state_shape = state_shape
-        self.n_atoms = n_atoms
-        self.support = support
 
         self.conv1 = nn.Conv2d(channel, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
@@ -26,73 +23,26 @@ class Model(nn.Module):
 
         convw = conv2d_size_out(convw, kernel_size=3, stride=1)
         convh = conv2d_size_out(convh, kernel_size=3, stride=1)
-        linear_imathut_size = convw * convh * 64
+        linear_input_size = convw * convh * 64
 
-        self.adv_fc = NoisyLayer(linear_imathut_size, 512)
-        self.value_fc = NoisyLayer(linear_imathut_size, 512)
-        self.adv = NoisyLayer(512, self.n_actions * self.n_atoms)
-        self.value = NoisyLayer(512, self.n_atoms)
+        self.fc = nn.Linear(linear_input_size, 512)
+        self.q_values = nn.Linear(512, self.n_actions)
 
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight.detach())
+                nn.init.kaiming_normal_(m.weight)
+                m.bias.data.zero_()
+            elif isinstance(m, torch.nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
                 m.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, inputs):
+        x = inputs
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
         x = x.view(x.size(0), -1)
-        adv_fc = F.relu(self.adv_fc(x))
-        value_fc = F.relu(self.value_fc(x))
-        adv = self.adv(adv_fc.T).T.view(-1, self.n_actions, self.n_atoms)
-        value = self.value(value_fc.T).T.view(-1, 1, self.n_atoms)
+        x = F.relu(self.fc(x))
 
-        mass_probs = value + adv - adv.mean(1, keepdim=True)
-        return F.softmax(mass_probs, dim=-1)
+        return self.q_values(x)
 
-    def get_q_value(self, x):
-        dist = self(x)
-        q_value = (dist * self.support).sum(-1)
-        return q_value
-
-    def reset(self):
-        self.adv_fc.reset_noise()
-        self.value_fc.reset_noise()
-        self.adv.reset_noise()
-        self.value.reset_noise()
-
-
-class NoisyLayer(nn.Module):
-    def __init__(self, n_imathuts, n_outputs):
-        super(NoisyLayer, self).__init__()
-        self.n_imathuts = n_imathuts
-        self.n_outputs = n_outputs
-
-        self.mu_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_imathuts))
-        self.sigma_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_imathuts))
-
-        self.mu_b = nn.Parameter(torch.FloatTensor(self.n_outputs, 1))
-        self.sigma_b = nn.Parameter(torch.FloatTensor(self.n_outputs, 1))
-
-        self.mu_w.data.uniform_(-1 / math.sqrt(self.n_imathuts), 1 / math.sqrt(self.n_imathuts))
-        self.sigma_w.data.fill_(0.5 / math.sqrt(self.n_imathuts))
-
-        self.mu_b.data.uniform_(-1 / math.sqrt(self.n_imathuts), 1 / math.sqrt(self.n_imathuts))
-        self.sigma_b.data.fill_(0.5 / math.sqrt(self.n_imathuts))
-
-        self.reset_noise()
-
-    def forward(self, imathuts):
-        x = imathuts
-        weights = self.mu_w + self.sigma_w.mul(self.epsilon_j.mm(self.epsilon_i.T))
-        biases = self.mu_b + self.sigma_b.mul(self.epsilon_j)
-        x = x.mm(weights.T).T + biases
-        return x
-
-    def f(self, x):
-        return torch.sign(x) * torch.sqrt(torch.abs(x))
-
-    def reset_noise(self):
-        self.epsilon_i = self.f(torch.randn(self.n_imathuts)).view(-1, 1).cuda()
-        self.epsilon_j = self.f(torch.randn(self.n_outputs)).view(-1, 1).cuda()

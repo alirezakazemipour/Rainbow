@@ -40,14 +40,11 @@ if __name__ == '__main__':
                 s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
-                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"])
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
-                if step % params["train_period"] == 0:
-                    loss = agent.train(beta)
-                    episode_loss += loss
-                else:
-                    episode_loss += 0
+                loss = agent.train()
+                episode_loss += loss
+
                 episode_reward += r
 
                 # if step % save_interval == 0:
@@ -58,7 +55,8 @@ if __name__ == '__main__':
 
             logger.off()
             if episode % log_interval == 0:
-                logger.print(episode, episode_reward, episode_loss, step, len(agent.memory), beta)
+                logger.print(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
+            agent.update_epsilon()
                 
     else:
         episode = params["max_episodes"]

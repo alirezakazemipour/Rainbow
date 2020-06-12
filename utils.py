@@ -1,14 +1,14 @@
-from skimage.transform import resize
 import numpy as np
+import cv2
 
 
 def rgb2gray(img):
-    return 0.2125 * img[..., 0] + 0.7154 * img[..., 1] + 0.0721 * img[..., 2]
+    return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
 
 def preprocessing(img):
     img = rgb2gray(img) / 255.0
-    img = resize(img, output_shape=[84, 84])
+    img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_AREA)
     return img
 
 
