@@ -33,12 +33,12 @@ class Model(nn.Module):
 
         nn.init.kaiming_normal_(self.adv_fc.weight, nonlinearity="relu")
         self.adv_fc.bias.data.zero_()
-        nn.init.xavier_uniform_(self.adv)
+        nn.init.xavier_uniform_(self.adv.weight)
         self.adv.bias.data.zero_()
 
         nn.init.kaiming_normal_(self.value_fc.weight, nonlinearity="relu")
         self.value_fc.bias.data.zero_()
-        nn.init.xavier_uniform_(self.value)
+        nn.init.xavier_uniform_(self.value.weight)
         self.value.bias.data.zero_()
 
         for m in self.modules():
