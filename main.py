@@ -46,11 +46,12 @@ if __name__ == '__main__':
         agent.epsilon = chekpoint["epsilon"]
         agent.memory = chekpoint["memory"]
         agent.n_step_buffer = chekpoint["n_step_buffer"]
-
         min_episode = chekpoint["episode"]
 
+        print("Keep training from previous run.")
     else:
         min_episode = 1
+        print("Train from scratch.")
 
     if params["do_train"]:
 
@@ -69,7 +70,9 @@ if __name__ == '__main__':
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
-                loss = agent.train()
+                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
+                    if len(agent.memory) > 1000 else params["beta"]
+                loss = agent.train(beta)
                 episode_loss += loss
                 episode_reward += r
 
@@ -78,8 +81,8 @@ if __name__ == '__main__':
 
             logger.off()
             agent.update_epsilon()
-            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon, **params)
-            if episode % params["save_interval"] == 0:
+            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon, beta)
+            if episode % params["interval"] == 0:
                 logger.save_weights(episode, agent)
 
     else:

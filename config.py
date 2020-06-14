@@ -12,15 +12,13 @@ def get_params():
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=10000, type=int, help="Maximum number of episodes to train the agent")
     parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment")
-    parser.add_argument("--save_interval", default=5, type=int, help="The interval specifies how often different"
-                                                                     "parameters should be saved, counted by episodes")
-    parser.add_argument("--print_interval", default=5, type=int, help="The interval specifies how often different"
-                                                                      "parameters should be printed, counted by episodes")
+    parser.add_argument("--interval", default=1, type=int, help="The interval specifies how often different"
+                                                        "parameters should be saved and printed, counted by episodes")
     parser.add_argument("--train_period", default=4, type=int,
                         help="The period that specifies the number of steps which the networks are not updated")
     parser.add_argument("--do_train", action="store_false", help="The flag determines whether to train"
                                                                  "the agent or play with it")
-    parser.add_argument("--train_from_scratch", action="store_true", help="The flag determines whether to train"
+    parser.add_argument("--train_from_scratch", action="store_false", help="The flag determines whether to train"
                                                                           "from scratch or continue previous tries")
     parser.add_argument("--V_min", default=-10, type=int, help="Lower bound of the value estimation of"
                                                                "the distributional algorithm")

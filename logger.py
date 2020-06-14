@@ -39,9 +39,9 @@ class Logger:
     def off(self):
         self.duration = time.time() - self.start_time
 
-    def log(self, *args, **kwargs):
+    def log(self, *args):
 
-        self.episode, episode_reward, loss, self.steps, memory_length, epsilon = args
+        self.episode, episode_reward, loss, self.steps, memory_length, epsilon, beta = args
         # episodes_rewards.append(episode_reward)
         #
         # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -75,7 +75,7 @@ class Logger:
         memory = psutil.virtual_memory()
         to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        if self.episode % self.config["print_interval"] == 0:
+        if self.episode % self.config["interval"] == 0:
             print("EP:{}| "
                   "EP_Reward:{:3.3f}| "
                   "EP_Running_Reward:{:3.3f}| "
@@ -84,6 +84,7 @@ class Logger:
                   "EP_loss:{:3.3f}| "
                   "Step:{}| "
                   "Epsilon:{:.3f}| "
+                  "Beta:{:.3f}| "
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
@@ -95,6 +96,7 @@ class Logger:
                                    loss,  # TODO make loss smooth
                                    self.steps,  # it should be in each step not in each episode
                                    epsilon,
+                                   beta,
                                    memory_length,
                                    self.duration / self.steps,
                                    to_gb(memory.used),

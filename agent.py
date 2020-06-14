@@ -24,7 +24,7 @@ class Agent:
         self.epsilon = self.config["epsilon"]
         self.decay_rate = self.config["decay_rate"]
         self.min_epsilon = self.config["min_epsilon"]
-        self.memory = ReplayMemory(self.config["mem_size"])
+        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
 
         self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
@@ -93,10 +93,11 @@ class Agent:
         next_states = next_states.permute(dims=[0, 3, 1, 2])
         return states, actions, rewards, next_states, dones
 
-    def train(self):
+    def train(self, beta):
         if len(self.memory) < 1000: # to reduce correlation
             return 0  # as no loss
-        batch = self.memory.sample(self.batch_size)
+        batch, weights, indices = self.memory.sample(self.batch_size, beta)
+        weights = from_numpy(weights).float().to(self.device)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
         q_eval = self.online_model(states).gather(dim=-1, index=actions.long())
@@ -108,7 +109,11 @@ class Agent:
             q_next = q_next.gather(dim=-1, index=next_actions.long())
 
             q_target = rewards + (self.gamma ** self.config["multi_step_n"]) * q_next * (1 - dones)
-        dqn_loss = self.loss_fn(q_eval, q_target)
+        td_error = q_target - q_eval
+        self.memory.update_priorities(indices, td_error.abs().detach().cpu().numpy() + 0.01)
+
+        dqn_loss = (q_eval - q_target).pow(2) * weights
+        dqn_loss = dqn_loss.mean()
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
