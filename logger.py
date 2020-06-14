@@ -2,7 +2,6 @@ import time
 import numpy as np
 import psutil
 from torch.utils.tensorboard import SummaryWriter
-import datetime
 import torch
 import os
 import datetime
@@ -28,7 +27,6 @@ class Logger:
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
         self.avg_steps_reward = 0
-        self.save_interval = 10
 
     @staticmethod
     def create_wights_folder():
