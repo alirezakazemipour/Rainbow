@@ -28,6 +28,8 @@ class Logger:
         self.avg_episode_reward = -np.inf
         self.avg_steps_reward = 0
 
+        self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
+
     @staticmethod
     def create_wights_folder():
         if not os.path.exists("models"):
@@ -41,7 +43,7 @@ class Logger:
 
     def log(self, *args):
 
-        self.episode, episode_reward, loss, self.steps, memory_length, epsilon, beta = args
+        episode, episode_reward, loss, steps, memory_length, epsilon, beta = args
         # episodes_rewards.append(episode_reward)
         #
         # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -73,34 +75,31 @@ class Logger:
             global_running_r = 0.99 * global_running_r + 0.01 * episode_reward
 
         memory = psutil.virtual_memory()
-        to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
-        if self.episode % self.config["interval"] == 0:
+        if episode % self.config["interval"] == 0:
             print("EP:{}| "
                   "EP_Reward:{:3.3f}| "
                   "EP_Running_Reward:{:3.3f}| "
                   "EP_Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "
                   "EP_loss:{:3.3f}| "
-                  "Step:{}| "
                   "Epsilon:{:.3f}| "
                   "Beta:{:.3f}| "
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
-                  "Time:{}".format(self.episode,
+                  "Time:{}".format(episode,
                                    episode_reward,
                                    global_running_r,
                                    global_running_l,
                                    self.duration,
                                    loss,  # TODO make loss smooth
-                                   self.steps,  # it should be in each step not in each episode
                                    epsilon,
                                    beta,
                                    memory_length,
-                                   self.duration / self.steps,
-                                   to_gb(memory.used),
-                                   to_gb(memory.total),
+                                   self.duration / steps,
+                                   self.to_gb(memory.used),
+                                   self.to_gb(memory.total),
                                    datetime.datetime.now().strftime("%H:%M:%S")
                                    ))
         with SummaryWriter("./logs/" + self.log_dir) as writer:

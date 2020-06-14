@@ -70,12 +70,13 @@ if __name__ == '__main__':
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
-                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
-                    if len(agent.memory) > 1000 else params["beta"]
-                loss = agent.train(beta)
-                episode_loss += loss
-                episode_reward += r
+                if episode % params["train_period"]:
+                	beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
+                    	if len(agent.memory) > 1000 else params["beta"]
+	                loss = agent.train(beta)
+	                episode_loss += loss
 
+                episode_reward += r
                 if d:
                     break
 

@@ -12,7 +12,7 @@ def get_params():
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=10000, type=int, help="Maximum number of episodes to train the agent")
     parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment")
-    parser.add_argument("--interval", default=1, type=int, help="The interval specifies how often different"
+    parser.add_argument("--interval", default=4, type=int, help="The interval specifies how often different"
                                                         "parameters should be saved and printed, counted by episodes")
     parser.add_argument("--train_period", default=4, type=int,
                         help="The period that specifies the number of steps which the networks are not updated")
@@ -30,7 +30,7 @@ def get_params():
     parser.add_argument("--alpha", default=0.6, type=float, help="The aggressiveness parameter of PER")
     parser.add_argument("--beta", default=0.4, type=float, help="The robustness parameter of PER")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration probability")
-    parser.add_argument("--decay_rate", default=2e-2, type=float, help="Decay rate of the exploration probability")
+    parser.add_argument("--decay_rate", default=4e-2, type=float, help="Decay rate of the exploration probability")
     parser.add_argument("--min_epsilon", default=0.01, type=float, help="Minimum probability of exploration")
     parser.add_argument("--weights_path", default="models/params.pth", type=str, help="Path of weights either for"
                                                                                       "train or play ")

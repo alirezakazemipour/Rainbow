@@ -120,7 +120,7 @@ class Agent:
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        if self.steps % 1000 == 0:
+        if self.steps % 8000 == 0:
             self.hard_update_of_target_network()
         return dqn_loss.detach().cpu().numpy()
 
