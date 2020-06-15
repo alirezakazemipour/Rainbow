@@ -21,3 +21,23 @@ def stack_frames(stacked_frames, state, is_new_episode):
         stacked_frames = stacked_frames[..., :3]
         stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=2)], axis=2)
     return stacked_frames
+
+
+def step_repetitive_action(env, max_lives, action):
+    successive_states = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
+    reward, done = 0, False
+    for t in range(4):
+        state, r, done, info = env.step(action)
+        reward += r
+        if t == 2:
+            successive_states[0] = state
+        elif t == 3:
+            successive_states[1] = state
+        if done:
+            break
+
+    state = successive_states.max(axis=0)
+    if max_lives > info["ale.lives"] > 0:
+        done = True
+
+    return state, reward, done, info

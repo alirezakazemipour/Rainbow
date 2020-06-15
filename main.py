@@ -5,16 +5,18 @@ from agent import Agent
 from utils import *
 from config import get_params
 import time
+from copy import deepcopy as dc
 
 
 def intro_env():
     test_env.reset()
     for _ in range(max_steps):
         a = test_env.action_space.sample()
-        _, reward, done, _ = test_env.step(a)
+        _, reward, done, info = test_env.step(a)
         test_env.render()
         time.sleep(0.005)
         print(f"reward: {reward}")
+        print(info)
         if done:
             break
     test_env.close()
@@ -26,6 +28,7 @@ if __name__ == '__main__':
     test_env = gym.make(params["env_name"])
     n_actions = test_env.action_space.n
     max_steps = test_env._max_episode_steps
+    max_lives = test_env.ale.lives()
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
@@ -65,8 +68,7 @@ if __name__ == '__main__':
 
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
-                for _ in range(4):
-                    s_, r, d, _ = env.step(action)
+                s_, r, d, _ = step_repetitive_action(dc(env), max_lives, action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
