@@ -28,7 +28,7 @@ def get_params():
     parser.add_argument("--N_atoms", default=51, type=int, help="Number of atoms to predict the value distribution in"
                                                                 "the distributional algorithm")
     parser.add_argument("--adam_eps", default=1.5e-4, type=float, help="The Adam epsilon")
-    parser.add_argument("--alpha", default=0.6, type=float, help="The aggressiveness parameter of PER")
+    parser.add_argument("--alpha", default=0.5, type=float, help="The aggressiveness parameter of PER")
     parser.add_argument("--beta", default=0.4, type=float, help="The robustness parameter of PER")
     parser.add_argument("--epsilon", default=1.0, type=float, help="Exploration probability")
     parser.add_argument("--decay_rate", default=4e-2, type=float, help="Decay rate of the exploration probability")

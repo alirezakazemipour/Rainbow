@@ -65,7 +65,8 @@ if __name__ == '__main__':
 
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
-                s_, r, d, _ = env.step(action)
+                for _ in range(4):
+                    s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
