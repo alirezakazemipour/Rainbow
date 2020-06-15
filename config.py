@@ -12,7 +12,7 @@ def get_params():
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=1000, type=int, help="Maximum number of episodes to train the agent")
     parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment")
-    parser.add_argument("--interval", default=4, type=int,
+    parser.add_argument("--interval", default=1, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes")
     parser.add_argument("--train_period", default=4, type=int,

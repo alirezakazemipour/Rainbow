@@ -9,11 +9,13 @@ def conv2d_size_out(size, kernel_size=5, stride=2):
 
 
 class Model(nn.Module):
-    def __init__(self, state_shape, n_actions):
+    def __init__(self, state_shape, n_actions, n_atoms, support):
         super(Model, self).__init__()
         width, height, channel = state_shape
         self.n_actions = n_actions
         self.state_shape = state_shape
+        self.n_atoms = n_atoms
+        self.support = support
 
         self.conv1 = nn.Conv2d(channel, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
@@ -27,10 +29,10 @@ class Model(nn.Module):
         linear_input_size = convw * convh * 64
 
         self.adv_fc = NoisyLayer(linear_input_size, 512)
-        self.adv = NoisyLayer(512, self.n_actions)
+        self.adv = NoisyLayer(512, self.n_actions * self.n_atoms)
 
         self.value_fc = NoisyLayer(linear_input_size, 512)
-        self.value = NoisyLayer(512, 1)
+        self.value = NoisyLayer(512, self.n_atoms)
 
         # nn.init.kaiming_normal_(self.adv_fc.weight, nonlinearity="relu")
         # self.adv_fc.bias.data.zero_()
@@ -56,12 +58,17 @@ class Model(nn.Module):
         x = x.view(x.size(0), -1)
 
         adv_fc = F.relu(self.adv_fc(x))
-        adv = self.adv(adv_fc.T).T
+        adv = self.adv(adv_fc.T).T.view(-1, self.n_actions, self.n_atoms)
         value_fc = F.relu(self.value_fc(x))
-        value = self.value(value_fc.T).T
+        value = self.value(value_fc.T).T.view(-1, 1, self.n_atoms)
 
-        q_values = value + adv - adv.mean(-1, keepdim=True)
-        return q_values
+        mass_probs = value + adv - adv.mean(1, keepdim=True)
+        return F.softmax(mass_probs, dim=-1).clamp(min=1e-3)
+
+    def get_q_value(self, x):
+        dist = self(x)
+        q_value = (dist * self.support).sum(-1)
+        return q_value
 
     def reset(self):
         self.adv_fc.reset_noise()

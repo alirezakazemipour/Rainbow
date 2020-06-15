@@ -26,8 +26,14 @@ class Agent:
         # self.min_epsilon = self.config["min_epsilon"]
         self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
 
-        self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
-        self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
+        self.v_min = self.config["V_min"]
+        self.v_max = self.config["V_max"]
+        self.n_atoms = self.config["N_atoms"]
+        self.support = torch.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
+        self.delta_z = (self.v_max - self.v_min) / (self.n_atoms - 1)
+
+        self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
+        self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model.load_state_dict(self.online_model.state_dict())
         self.target_model.eval()
 
@@ -46,7 +52,7 @@ class Agent:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).float().to(self.device)
         with torch.no_grad():
-            action = self.online_model(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
+            action = self.online_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
         self.steps += 1
         Logger.simulation_steps += 1
@@ -100,23 +106,33 @@ class Agent:
         weights = from_numpy(weights).float().to(self.device)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
-        q_eval = self.online_model(states).gather(dim=-1, index=actions.long())
         with torch.no_grad():
-            q_next = self.target_model(next_states)
-            q_eval_next = self.online_model(next_states)
+            q_eval_next = self.online_model.get_q_value(next_states)
+            next_actions = q_eval_next.argmax(dim=-1)
+            q_next = self.target_model(next_states)[range(self.batch_size), next_actions.long()]
 
-            next_actions = q_eval_next.argmax(dim=-1).view(-1, 1)
-            q_next = q_next.gather(dim=-1, index=next_actions.long())
+            projected_atoms = rewards + (self.config["gamma"] ** self.config["multi_step_n"]) * self.support * (1 - dones)
+            projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
 
-            q_target = rewards + (self.gamma ** self.config["multi_step_n"]) * q_next * (1 - dones)
-        td_error = q_target - q_eval
-        self.memory.update_priorities(indices, td_error.abs().detach().cpu().numpy() + 0.01)
+            b = (projected_atoms - self.v_min) / self.delta_z
+            lower_bound = b.floor().long()
+            upper_bound = b.ceil().long()
 
-        dqn_loss = (q_eval - q_target).pow(2) * weights
-        dqn_loss = dqn_loss.mean()
+            projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
+            for i in range(self.batch_size):
+                for j in range(self.n_atoms):
+                    projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
+                    projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
+
+        eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
+        dqn_loss = - (projected_dist * torch.log(eval_dist + 1e-8)).sum(-1)
+        td_error = dqn_loss.abs()
+        self.memory.update_priorities(indices, td_error.detach().cpu().numpy() + 0.01)
+        dqn_loss = (dqn_loss * weights).mean()
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
