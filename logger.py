@@ -78,7 +78,7 @@ class Logger:
 
         if episode % self.config["interval"] == 0:
             print("EP:{}| "
-                  "EP_Reward:{:3.3f}| "
+                  "EP_Reward:{}| "
                   "EP_Running_Reward:{:3.3f}| "
                   "EP_Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "

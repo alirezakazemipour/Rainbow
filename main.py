@@ -5,7 +5,6 @@ from agent import Agent
 from utils import *
 from config import get_params
 import time
-from copy import deepcopy as dc
 
 
 def intro_env():
@@ -69,11 +68,12 @@ if __name__ == '__main__':
 
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
-                s_, r, d, _ = step_repetitive_action(dc(env), max_lives, action)
+                s_, r, d, _ = step_repetitive_action(env, max_lives, action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
+                # time.sleep(0.005)
                 if step % params["train_period"]:
                     beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
                         if len(agent.memory) > 1000 else params["beta"]
