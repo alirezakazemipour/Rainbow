@@ -26,13 +26,18 @@ class Agent:
         self.min_epsilon = self.config["min_epsilon"]
         self.memory = ReplayMemory(self.config["mem_size"])
 
-        self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
-        self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
+        self.v_min = self.config["V_min"]
+        self.v_max = self.config["V_max"]
+        self.n_atoms = self.config["N_atoms"]
+        self.support = torch.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
+        self.delta_z = (self.v_max - self.v_min) / (self.n_atoms - 1)
+
+        self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
+        self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model.load_state_dict(self.online_model.state_dict())
         self.target_model.eval()
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
-        self.loss_fn = nn.MSELoss()
 
         self.steps = 0
 
@@ -44,7 +49,7 @@ class Agent:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).float().to(self.device)
             with torch.no_grad():
-                action = self.online_model(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
+                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
         self.steps += 1
         Logger.simulation_steps += 1
@@ -91,22 +96,43 @@ class Agent:
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
-        q_eval = self.online_model(states).gather(dim=-1, index=actions.long())
         with torch.no_grad():
-            q_next = self.target_model(next_states)
-            q_eval_next = self.online_model(next_states)
+            q_next = self.target_model.get_q_value(next_states)
+            selected_actions = torch.argmax(q_next, dim=-1)
+            q_next = self.target_model(next_states)[range(self.batch_size), selected_actions.long()]
 
-            next_actions = q_eval_next.argmax(dim=-1).view(-1, 1)
-            q_next = q_next.gather(dim=-1, index=next_actions.long())
+            projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones)
+            projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
 
-            q_target = rewards + self.gamma * q_next * (1 - dones)
-        dqn_loss = self.loss_fn(q_eval, q_target)
+            b = (projected_atoms - self.v_min) / self.delta_z
+            lower_bound = b.floor().long()
+            upper_bound = b.ceil().long()
+
+            # projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
+            # for i in range(self.batch_size):
+            #     for j in range(self.n_atoms):
+            #         projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
+            #         projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
+
+            offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
+                .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
+
+            projected_dist = torch.zeros(q_next.size()).to(self.device)
+            projected_dist.view(-1).index_add_(0, (lower_bound + offset).view(-1),
+                                               (q_next * (upper_bound.float() - b)).view(-1))
+            projected_dist.view(-1).index_add_(0, (upper_bound + offset).view(-1),
+                                               (q_next * (b - lower_bound.float())).view(-1))
+
+        eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
+        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1).mean()
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
         self.optimizer.step()
 
-        self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
+        if self.steps % 8000 == 0:
+            self.hard_update_of_target_network()
+
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, path):
