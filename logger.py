@@ -43,7 +43,7 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, steps, memory_length, epsilon, beta = args
+        episode, episode_reward, loss, steps, memory_length, beta = args
         # episodes_rewards.append(episode_reward)
         #
         # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -83,7 +83,6 @@ class Logger:
                   "EP_Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "
                   "EP_loss:{:3.3f}| "
-                  "Epsilon:{:.3f}| "
                   "Beta:{:.3f}| "
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
@@ -94,7 +93,6 @@ class Logger:
                                    global_running_l,
                                    self.duration,
                                    loss,  # TODO make loss smooth
-                                   epsilon,
                                    beta,
                                    memory_length,
                                    self.duration / steps,
@@ -135,7 +133,6 @@ class Logger:
         torch.save({"online_model_state_dict": agent.online_model.state_dict(),
                     "target_model_state_dict": agent.target_model.state_dict(),
                     "optimizer_state_dict": agent.optimizer.state_dict(),
-                    "epsilon": agent.epsilon,
                     "memory": agent.memory,
                     "n_step_buffer": agent.n_step_buffer,
                     "episode": episode},

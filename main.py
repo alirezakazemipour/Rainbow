@@ -71,18 +71,18 @@ if __name__ == '__main__':
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
                 if episode % params["train_period"]:
-                	beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
-                    	if len(agent.memory) > 1000 else params["beta"]
-	                loss = agent.train(beta)
-	                episode_loss += loss
+                    beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
+                        if len(agent.memory) > 1000 else params["beta"]
+                    loss = agent.train(beta)
+                    episode_loss += loss
 
                 episode_reward += r
                 if d:
                     break
 
             logger.off()
-            agent.update_epsilon()
-            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon, beta)
+            # agent.update_epsilon()
+            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), beta)
             if episode % params["interval"] == 0:
                 logger.save_weights(episode, agent)
 

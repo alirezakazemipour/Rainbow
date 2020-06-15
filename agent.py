@@ -21,9 +21,9 @@ class Agent:
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
         self.tau = self.config["tau"]
-        self.epsilon = self.config["epsilon"]
-        self.decay_rate = self.config["decay_rate"]
-        self.min_epsilon = self.config["min_epsilon"]
+        # self.epsilon = self.config["epsilon"]
+        # self.decay_rate = self.config["decay_rate"]
+        # self.min_epsilon = self.config["min_epsilon"]
         self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
 
         self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
@@ -40,13 +40,13 @@ class Agent:
 
     def choose_action(self, state):
 
-        if np.random.random() < self.epsilon:
-            action = np.random.randint(0, self.n_actions)
-        else:
-            state = np.expand_dims(state, axis=0)
-            state = from_numpy(state).float().to(self.device)
-            with torch.no_grad():
-                action = self.online_model(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
+        # if np.random.random() < self.epsilon:
+        #     action = np.random.randint(0, self.n_actions)
+        # else:
+        state = np.expand_dims(state, axis=0)
+        state = from_numpy(state).float().to(self.device)
+        with torch.no_grad():
+            action = self.online_model(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
         self.steps += 1
         Logger.simulation_steps += 1
@@ -122,6 +122,9 @@ class Agent:
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
         if self.steps % 8000 == 0:
             self.hard_update_of_target_network()
+
+        self.online_model.reset()
+        self.target_model.reset()
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, path):
@@ -129,9 +132,9 @@ class Agent:
         self.online_model.load_state_dict(model_state_dict)
         self.online_model.eval()
 
-    def update_epsilon(self):
-        self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
-            else self.min_epsilon
+    # def update_epsilon(self):
+    #     self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
+    #         else self.min_epsilon
 
     def n_step_returns(self):
         reward, next_state, done = self.n_step_buffer[-1][-3:]
