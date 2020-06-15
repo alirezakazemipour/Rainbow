@@ -26,6 +26,7 @@ def intro_env():
 if __name__ == '__main__':
     params = get_params()
     test_env = gym.make(params["env_name"])
+    assert 'NoFrameskip' in test_env.spec.id
     n_actions = test_env.action_space.n
     max_steps = test_env._max_episode_steps
     max_lives = test_env.ale.lives()
