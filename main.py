@@ -50,12 +50,12 @@ if __name__ == '__main__':
 
         print("Keep training from previous run.")
     else:
-        min_episode = 1
+        min_episode = 0
         print("Train from scratch.")
 
     if params["do_train"]:
 
-        for episode in range(min_episode, params["max_episodes"] + 1):
+        for episode in range(min_episode + 1, params["max_episodes"] + 1):
             s = env.reset()
             stacked_frames = stack_frames(stacked_frames, s, True)
             episode_reward = 0
@@ -70,7 +70,7 @@ if __name__ == '__main__':
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
                 # env.render()
-                if episode % params["train_period"]:
+                if step % params["train_period"]:
                     beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
                         if len(agent.memory) > 1000 else params["beta"]
                     loss = agent.train(beta)
