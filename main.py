@@ -92,10 +92,10 @@ if __name__ == '__main__':
                     break
 
             logger.off()
-            # agent.update_epsilon()
-            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.beta)
-            if episode % params["interval"] == 0:
-                logger.save_weights(episode, agent)
+            agent.update_epsilon()
+            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
+            # if episode % params["interval"] == 0:
+            #     logger.save_weights(episode, agent)
 
     else:
         episode = params["max_episodes"]

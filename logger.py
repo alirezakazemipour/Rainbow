@@ -43,7 +43,7 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, steps, memory_length, beta = args
+        episode, episode_reward, loss, steps, memory_length, epsilon = args
         # episodes_rewards.append(episode_reward)
         #
         # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -83,7 +83,7 @@ class Logger:
                   "EP_Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "
                   "EP_loss:{:3.3f}| "
-                  "Beta:{:.3f}| "
+                  "Epsilon:{:.3f}| "
                   "Memory_length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
@@ -93,7 +93,7 @@ class Logger:
                                    global_running_l,
                                    self.duration,
                                    loss,  # TODO make loss smooth
-                                   beta,
+                                   epsilon,
                                    memory_length,
                                    self.duration / steps,
                                    self.to_gb(memory.used),
@@ -131,10 +131,8 @@ class Logger:
 
     def save_weights(self, episode, agent):
         torch.save({"online_model_state_dict": agent.online_model.state_dict(),
-                    "target_model_state_dict": agent.target_model.state_dict(),
                     "optimizer_state_dict": agent.optimizer.state_dict(),
                     "memory": agent.memory,
-                    "n_step_buffer": agent.n_step_buffer,
                     "episode": episode},
                    self.config["weights_path"])
 
