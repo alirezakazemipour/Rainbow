@@ -5,7 +5,6 @@ from torch.optim.adam import Adam
 from logger import Logger
 import numpy as np
 from replay_memory import ReplayMemory, Transition
-from collections import deque
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
