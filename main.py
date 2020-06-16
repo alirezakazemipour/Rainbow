@@ -25,15 +25,16 @@ def intro_env():
 if __name__ == '__main__':
     params = get_params()
     test_env = gym.make(params["env_name"])
+    n_actions = test_env.action_space.n
+    max_steps = test_env._max_episode_steps
+    print(f"Environment: {params['env_name']}\n"
+          f"Number of actions:{n_actions}")
+
     if 'FIRE' in test_env.unwrapped.get_action_meanings():
         test_env = FireResetEnv(test_env)
     else:
         test_env = EpisodicLifeEnv(test_env)
     assert 'NoFrameskip' in test_env.env.spec.id
-    n_actions = test_env.env.action_space.n
-    max_steps = test_env.env._max_episode_steps
-    print(f"Environment: {params['env_name']}\n"
-          f"Number of actions:{n_actions}")
 
     if params["do_intro_env"]:
         intro_env()
