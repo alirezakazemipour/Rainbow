@@ -143,7 +143,7 @@ class Agent:
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        if Logger.simulation_steps % 1000 == 0:
+        if Logger.simulation_steps % 5000 == 0:
             self.hard_update_of_target_network()
 
         self.online_model.reset()
