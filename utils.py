@@ -73,7 +73,7 @@ class RepeatActionEnv(AtariEnv):
 
 class EpisodicLifeEnv(RepeatActionEnv):
     def __init__(self, env):
-        super(EpisodicLifeEnv, self).__init__(env.gym_env)
+        super(EpisodicLifeEnv, self).__init__(env)
         self.natural_done = True
         self.lives = self.env.ale.lives()
 
@@ -98,8 +98,7 @@ class EpisodicLifeEnv(RepeatActionEnv):
 
 class FireResetEnv(EpisodicLifeEnv):
     def __init__(self, env):
-        super(EpisodicLifeEnv, self).__init__(env)
-        self.gym_env = env
+        super(FireResetEnv, self).__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 

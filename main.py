@@ -27,7 +27,8 @@ if __name__ == '__main__':
     test_env = gym.make(params["env_name"])
     if 'FIRE' in test_env.unwrapped.get_action_meanings():
         test_env = FireResetEnv(test_env)
-    test_env = EpisodicLifeEnv(test_env)
+    else:
+        test_env = EpisodicLifeEnv(test_env)
     assert 'NoFrameskip' in test_env.env.spec.id
     n_actions = test_env.env.action_space.n
     max_steps = test_env.env._max_episode_steps
@@ -40,7 +41,8 @@ if __name__ == '__main__':
     env = gym.make(params["env_name"])
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    env = EpisodicLifeEnv(env)
+    else:
+        env = EpisodicLifeEnv(env)
     logger = Logger(**params)
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions,
