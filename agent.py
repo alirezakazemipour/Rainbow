@@ -136,7 +136,7 @@ class Agent:
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
         dqn_loss = - (projected_dist * torch.log(eval_dist + 1e-8)).sum(-1)
         td_error = dqn_loss.abs()
-        self.memory.update_priorities(indices, td_error.detach().cpu().numpy() + 0.01)
+        self.memory.update_priorities(indices, td_error.detach().cpu().numpy() + 0.001)
         dqn_loss = (dqn_loss * weights).mean()
 
         self.optimizer.zero_grad()

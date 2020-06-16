@@ -24,7 +24,7 @@ class ReplayMemory:
         priors = np.asarray(self.priorities) ** self.alpha
         total_priors = priors.sum()
         probabilities = (priors / total_priors).astype(np.float32).reshape(-1)
-        sample_indices = np.random.choice(len(self.memory), batch_size, p=probabilities)
+        sample_indices = np.random.choice(len(self.memory), batch_size, p=probabilities, replace=False)
         weights = (len(self.memory) * probabilities[sample_indices]) ** (-beta)
         weights /= weights.max()
 
