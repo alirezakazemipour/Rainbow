@@ -10,9 +10,9 @@ import time
 def intro_env():
     test_env.reset()
     for _ in range(max_steps):
-        a = test_env.action_space.sample()
+        a = test_env.env.action_space.sample()
         _, reward, done, info = test_env.step(a)
-        test_env.render()
+        test_env.env.render()
         time.sleep(0.005)
         print(f"reward: {reward}")
         print(info)
@@ -25,9 +25,12 @@ def intro_env():
 if __name__ == '__main__':
     params = get_params()
     test_env = gym.make(params["env_name"])
-    assert 'NoFrameskip' in test_env.spec.id
-    n_actions = test_env.action_space.n
-    max_steps = test_env._max_episode_steps
+    if 'FIRE' in test_env.unwrapped.get_action_meanings():
+        test_env = FireResetEnv(test_env)
+    test_env = EpisodicLifeEnv(test_env)
+    assert 'NoFrameskip' in test_env.env.spec.id
+    n_actions = test_env.env.action_space.n
+    max_steps = test_env.env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
