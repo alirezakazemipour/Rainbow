@@ -40,6 +40,7 @@ if __name__ == '__main__':
         intro_env()
 
     env = gym.make(params["env_name"])
+    env.seed(123)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     else:
@@ -80,12 +81,10 @@ if __name__ == '__main__':
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.render()
-                # time.sleep(0.005)
+                env.env.render()
+                time.sleep(0.005)
                 if step % params["train_period"]:
-                    beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / params["max_episodes"]) \
-                        if len(agent.memory) > 1000 else params["beta"]
-                    loss = agent.train(beta)
+                    loss = agent.train()
                     episode_loss += loss
 
                 episode_reward += r
@@ -94,7 +93,7 @@ if __name__ == '__main__':
 
             logger.off()
             # agent.update_epsilon()
-            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), beta)
+            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.beta)
             if episode % params["interval"] == 0:
                 logger.save_weights(episode, agent)
 

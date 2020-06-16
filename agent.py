@@ -38,9 +38,9 @@ class Agent:
         self.target_model.eval()
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
-        self.loss_fn = nn.MSELoss()
 
-        self.steps = 0
+        self.beta = config["beta"]
+        self.update_counter = 0
 
         self.n_step_buffer = deque(maxlen=self.config["multi_step_n"])
 
@@ -54,9 +54,7 @@ class Agent:
         with torch.no_grad():
             action = self.online_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
-        self.steps += 1
         Logger.simulation_steps += 1
-
         return action
 
     def store(self, state, action, reward, next_state, done):
@@ -99,10 +97,10 @@ class Agent:
         next_states = next_states.permute(dims=[0, 3, 2, 1])
         return states, actions, rewards, next_states, dones
 
-    def train(self, beta):
+    def train(self):
         if len(self.memory) < 1000: # to reduce correlation
             return 0  # as no loss
-        batch, weights, indices = self.memory.sample(self.batch_size, beta)
+        batch, weights, indices = self.memory.sample(self.batch_size, self.beta)
         weights = from_numpy(weights).float().to(self.device)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
@@ -135,8 +133,8 @@ class Agent:
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
         dqn_loss = - (projected_dist * torch.log(eval_dist + 1e-8)).sum(-1)
-        td_error = dqn_loss.abs()
-        self.memory.update_priorities(indices, td_error.detach().cpu().numpy() + 1e-6)
+        td_error = dqn_loss.abs() + 1e-3
+        self.memory.update_priorities(indices, td_error.detach().cpu().numpy())
         dqn_loss = (dqn_loss * weights).mean()
 
         self.optimizer.zero_grad()
@@ -145,11 +143,15 @@ class Agent:
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        if self.steps % 8000 == 0:
+        if Logger.simulation_steps % 1000 == 0:
             self.hard_update_of_target_network()
 
         self.online_model.reset()
         self.target_model.reset()
+
+        self.beta = min(1.0, self.beta + self.update_counter * (1.0 - self.beta) / 1000000)
+
+        self.update_counter += 1
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, path):
