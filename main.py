@@ -28,7 +28,6 @@ if __name__ == '__main__':
     assert 'NoFrameskip' in test_env.spec.id
     n_actions = test_env.action_space.n
     max_steps = test_env._max_episode_steps
-    max_lives = test_env.ale.lives()
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
@@ -36,6 +35,9 @@ if __name__ == '__main__':
         intro_env()
 
     env = gym.make(params["env_name"])
+    if 'FIRE' in env.unwrapped.get_action_meanings():
+        env = FireResetEnv(env)
+    env = EpisodicLifeEnv(env)
     logger = Logger(**params)
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions,
@@ -68,7 +70,7 @@ if __name__ == '__main__':
 
                 stacked_frames_copy = stacked_frames.copy()
                 action = agent.choose_action(stacked_frames_copy)
-                s_, r, d, _ = step_repetitive_action(env, max_lives, action)
+                s_, r, d, _ = env.step(action)
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)

@@ -23,21 +23,95 @@ def stack_frames(stacked_frames, state, is_new_episode):
     return stacked_frames
 
 
-def step_repetitive_action(env, max_lives, action):
-    successive_states = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
-    reward, done = 0, False
-    for t in range(4):
-        state, r, done, info = env.step(action)
-        reward += r
-        if t == 2:
-            successive_states[0] = state
-        elif t == 3:
-            successive_states[1] = state
+class AtariEnv:
+    def __init__(self, env):
+        self.noop_max = 30
+        self.noop_action = 0
+        self.env = env
+        assert self.env.unwrapped.get_action_meanings()[0] == 'NOOP'
+
+    def reset(self):
+        self.env.reset()
+        noops = np.random.randint(1, self.noop_max + 1)
+        assert noops > 0
+
+        state = None
+        for _ in range(noops):
+            state, _, done, _ = self.env.step(self.noop_action)
+            if done:
+                state = self.env.reset()
+
+        return state
+
+    def step(self, action):
+        return self.env.step(action)
+
+
+class RepeatActionEnv(AtariEnv):
+    def __init__(self, env):
+        super(RepeatActionEnv, self).__init__(env)
+        self.successive_frame = np.zeros((2,) + self.env.observation_space.shape, dtype=np.uint8)
+
+    def reset(self):
+        return super().reset()
+
+    def step(self, action):
+        reward, done = 0, False
+        for t in range(4):
+            state, r, done, info = super().step(action)
+            if t == 2:
+                self.successive_frame[0] = state
+            elif t == 3:
+                self.successive_frame[1] = state
+            reward += r
+            if done:
+                break
+
+        state = self.successive_frame.max(axis=0)
+        return state, reward, done, info
+
+
+class EpisodicLifeEnv(RepeatActionEnv):
+    def __init__(self, env):
+        super(EpisodicLifeEnv, self).__init__(env.gym_env)
+        self.natural_done = True
+        self.lives = self.env.ale.lives()
+
+    def step(self, action):
+        state, reward, done, info = super().step(action)
+        self.natural_done = done
+
+        if self.lives > info["ale.lives"] > 0:
+            done = True
+        self.lives = info["ale.lives"]
+
+        return state, reward, done, info
+
+    def reset(self):
+        if self.natural_done:
+            state = super().reset()
+        else:
+            state, _, _, _ = super().step(0)
+        self.lives = self.env.ale.lives()
+        return state
+
+
+class FireResetEnv(EpisodicLifeEnv):
+    def __init__(self, env):
+        super(EpisodicLifeEnv, self).__init__(env)
+        self.gym_env = env
+        assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
+        assert len(env.unwrapped.get_action_meanings()) >= 3
+
+    def step(self, action):
+        return super().step(action)
+
+    def reset(self):
+        super().reset()
+        state, _, done, _ = super().step(1)
         if done:
-            break
-
-    state = successive_states.max(axis=0)
-    if max_lives > info["ale.lives"] > 0:
-        done = True
-
-    return state, reward, done, info
+            super().reset()
+        state, _, done, _ = super().step(2)
+        if done:
+            super().reset()
+        return state
