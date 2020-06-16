@@ -8,8 +8,7 @@ from replay_memory import ReplayMemory, Transition
 
 if torch.cuda.is_available():
     torch.backends.cudnn.deterministic = True
-torch.cuda.empty_cache()
-
+    torch.cuda.empty_cache()
 
 
 class Agent:
@@ -39,7 +38,7 @@ class Agent:
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
 
-        self.steps = 0
+        self.update_counter = 0
 
     def choose_action(self, state):
 
@@ -49,11 +48,9 @@ class Agent:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).float().to(self.device)
             with torch.no_grad():
-                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
+                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
-        self.steps += 1
         Logger.simulation_steps += 1
-
         return action
 
     def store(self, state, action, reward, next_state, done):
@@ -85,9 +82,9 @@ class Agent:
         rewards = torch.cat(batch.reward).to(self.device).view((-1, 1))
         next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         dones = torch.cat(batch.done).to(self.device).view((-1, 1))
-        states = states.permute(dims=[0, 3, 1, 2])
+        states = states.permute(dims=[0, 3, 2, 1])
         actions = actions.view((-1, 1))
-        next_states = next_states.permute(dims=[0, 3, 1, 2])
+        next_states = next_states.permute(dims=[0, 3, 2, 1])
         return states, actions, rewards, next_states, dones
 
     def train(self):
@@ -128,9 +125,11 @@ class Agent:
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
-        if self.steps % 8000 == 0:
+        # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
+        if Logger.simulation_steps % 5000 == 0:
             self.hard_update_of_target_network()
 
         return dqn_loss.detach().cpu().numpy()
@@ -143,3 +142,4 @@ class Agent:
     def update_epsilon(self):
         self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
             else self.min_epsilon
+
