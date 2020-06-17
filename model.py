@@ -38,7 +38,7 @@ class Model(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, inputs):
-        x = inputs
+        x = inputs / 255.0
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))

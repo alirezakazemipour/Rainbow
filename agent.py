@@ -41,7 +41,7 @@ class Agent:
             action = np.random.randint(0, self.n_actions)
         else:
             state = np.expand_dims(state, axis=0)
-            state = from_numpy(state).float().to(self.device)
+            state = from_numpy(state).byte().to(self.device)
             with torch.no_grad():
                 action = self.online_model(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
@@ -51,11 +51,11 @@ class Agent:
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
 
-        state = from_numpy(state).float().to('cpu')
-        reward = torch.Tensor([reward])
-        action = torch.LongTensor([action]).to('cpu')
-        next_state = from_numpy(next_state).float().to('cpu')
-        done = torch.LongTensor([done])
+        state = from_numpy(state).byte().to("cpu")
+        reward = torch.CharTensor([reward])
+        action = torch.ByteTensor([action]).to('cpu')
+        next_state = from_numpy(next_state).byte().to('cpu')
+        done = torch.BoolTensor([done])
         self.memory.add(state, action, reward, next_state, done)
 
     @staticmethod
@@ -88,7 +88,7 @@ class Agent:
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
-        q_eval = self.online_model(states).gather(dim=-1, index=actions)
+        q_eval = self.online_model(states).gather(dim=-1, index=actions.long())
         with torch.no_grad():
             q_next = self.target_model(next_states)
             q_eval_next = self.online_model(next_states)
@@ -96,7 +96,7 @@ class Agent:
             next_actions = q_eval_next.argmax(dim=-1).view(-1, 1)
             q_next = q_next.gather(dim=-1, index=next_actions)
 
-            q_target = rewards + self.gamma * q_next * (1 - dones)
+            q_target = rewards + self.gamma * q_next * (1 - dones.byte())
         dqn_loss = self.loss_fn(q_eval, q_target)
 
         self.optimizer.zero_grad()
@@ -104,9 +104,9 @@ class Agent:
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
-        self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        # if Logger.simulation_steps % 10000 == 0:
-        #     self.hard_update_of_target_network()
+        # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
+        if Logger.simulation_steps % 5000 == 0:
+            self.hard_update_of_target_network()
 
         return dqn_loss.detach().cpu().numpy()
 
