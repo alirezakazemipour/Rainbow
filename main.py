@@ -105,3 +105,5 @@ if __name__ == '__main__':
         player = Play(agent, env, play_path)
         player.evaluate()
         # endregion
+
+# Breakout showed sings of learning after 5000 episodes!!!!
