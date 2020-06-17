@@ -95,6 +95,9 @@ class EpisodicLifeEnv(RepeatActionEnv):
         self.lives = self.env.ale.lives()
         return state
 
+    def render(self):
+        self.env.render()
+
 
 class FireResetEnv(EpisodicLifeEnv):
     def __init__(self, env):
@@ -114,3 +117,6 @@ class FireResetEnv(EpisodicLifeEnv):
         if done:
             super().reset()
         return state
+
+    def render(self):
+        super().render()

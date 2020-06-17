@@ -81,7 +81,7 @@ if __name__ == '__main__':
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.env.render()
+                # env.render()
                 # time.sleep(0.005)
                 if step % params["train_period"]:
                     loss = agent.train()
@@ -92,7 +92,7 @@ if __name__ == '__main__':
                     break
 
             logger.off()
-            agent.update_epsilon()
+            agent.update_epsilon(episode)
             logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
             # if episode % params["interval"] == 0:
             #     logger.save_weights(episode, agent)
