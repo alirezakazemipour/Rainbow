@@ -133,7 +133,7 @@ class Logger:
     def save_weights(self, episode, agent):
         torch.save({"online_model_state_dict": agent.online_model.state_dict(),
                     "optimizer_state_dict": agent.optimizer.state_dict(),
-                    "memory": agent.memory,
+                    "epsilon": agent.epsilon,
                     "episode": episode},
                    self.config["weights_path"])
 
