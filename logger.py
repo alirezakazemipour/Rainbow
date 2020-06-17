@@ -75,7 +75,7 @@ class Logger:
             global_running_r = 0.99 * global_running_r + 0.01 * episode_reward
 
         memory = psutil.virtual_memory()
-        assert self.to_gb(memory.used) < 7.0
+        # assert self.to_gb(memory.used) < 7.0
 
         if episode % self.config["interval"] == 0:
             print("EP:{}| "
