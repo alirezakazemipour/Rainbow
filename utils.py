@@ -7,7 +7,7 @@ def rgb2gray(img):
 
 
 def preprocessing(img):
-    img = rgb2gray(img) / 255.0
+    img = rgb2gray(img)  # / 255.0 # Do it later in order to open up more RAM !!!!
     img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_AREA)
     return img
 
@@ -95,6 +95,9 @@ class EpisodicLifeEnv(RepeatActionEnv):
         self.lives = self.env.ale.lives()
         return state
 
+    def render(self):
+        self.env.render()
+
 
 class FireResetEnv(EpisodicLifeEnv):
     def __init__(self, env):
@@ -114,3 +117,6 @@ class FireResetEnv(EpisodicLifeEnv):
         if done:
             super().reset()
         return state
+
+    def render(self):
+        super().render()

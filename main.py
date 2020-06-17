@@ -54,10 +54,8 @@ if __name__ == '__main__':
     if not params["train_from_scratch"]:
         chekpoint = logger.load_weights()
         agent.online_model.load_state_dict(chekpoint["online_model_state_dict"])
-        agent.target_model.load_state_dict(chekpoint["target_model_state_dict"])
+        agent.hard_update_of_target_network()
         agent.epsilon = chekpoint["epsilon"]
-        agent.memory = chekpoint["memory"]
-        agent.n_step_buffer = chekpoint["n_step_buffer"]
         min_episode = chekpoint["episode"]
 
         print("Keep training from previous run.")
@@ -81,7 +79,7 @@ if __name__ == '__main__':
                 stacked_frames = stack_frames(stacked_frames, s_, False)
                 r = np.clip(r, -1.0, 1.0)
                 agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.env.render()
+                # env.render()
                 # time.sleep(0.005)
                 if step % params["train_period"]:
                     loss = agent.train()
@@ -92,10 +90,10 @@ if __name__ == '__main__':
                     break
 
             logger.off()
-            agent.update_epsilon()
+            agent.update_epsilon(episode)
             logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
-            # if episode % params["interval"] == 0:
-            #     logger.save_weights(episode, agent)
+            if episode % params["interval"] == 0:
+                logger.save_weights(episode, agent)
 
     else:
         episode = params["max_episodes"]
@@ -106,4 +104,4 @@ if __name__ == '__main__':
         player.evaluate()
         # endregion
 
-# Pacman learnt
+# Breakout showed sings of learning after 5000 episodes!!!!

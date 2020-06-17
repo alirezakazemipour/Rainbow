@@ -46,7 +46,7 @@ class Agent:
             action = np.random.randint(0, self.n_actions)
         else:
             state = np.expand_dims(state, axis=0)
-            state = from_numpy(state).float().to(self.device)
+            state = from_numpy(state).byte().to(self.device)
             with torch.no_grad():
                 action = self.online_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
 
@@ -56,11 +56,11 @@ class Agent:
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
 
-        state = from_numpy(state).float().to('cpu')
-        reward = torch.Tensor([reward])
-        action = torch.Tensor([action]).to('cpu')
-        next_state = from_numpy(next_state).float().to('cpu')
-        done = torch.Tensor([done])
+        state = from_numpy(state).byte().to("cpu")
+        reward = torch.CharTensor([reward])
+        action = torch.ByteTensor([action]).to('cpu')
+        next_state = from_numpy(next_state).byte().to('cpu')
+        done = torch.BoolTensor([done])
         self.memory.add(state, action, reward, next_state, done)
 
     @staticmethod
@@ -88,7 +88,7 @@ class Agent:
         return states, actions, rewards, next_states, dones
 
     def train(self):
-        if len(self.memory) < 1000:
+        if len(self.memory) < 10000:
             return 0  # as no loss
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
@@ -129,9 +129,10 @@ class Agent:
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        if Logger.simulation_steps % 5000 == 0:
+        if self.update_counter % 5000 == 0:
             self.hard_update_of_target_network()
 
+        self.update_counter += 1
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, path):
@@ -139,7 +140,7 @@ class Agent:
         self.online_model.load_state_dict(model_state_dict)
         self.online_model.eval()
 
-    def update_epsilon(self):
-        self.epsilon = self.epsilon - self.decay_rate if self.epsilon > self.min_epsilon + self.decay_rate \
-            else self.min_epsilon
+    def update_epsilon(self, episode):
+        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)\
+            if len(self.memory) > 10000 else 1.0
 

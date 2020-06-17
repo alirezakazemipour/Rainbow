@@ -75,6 +75,7 @@ class Logger:
             global_running_r = 0.99 * global_running_r + 0.01 * episode_reward
 
         memory = psutil.virtual_memory()
+        # assert self.to_gb(memory.used) < 7.0
 
         if episode % self.config["interval"] == 0:
             print("EP:{}| "
@@ -132,7 +133,7 @@ class Logger:
     def save_weights(self, episode, agent):
         torch.save({"online_model_state_dict": agent.online_model.state_dict(),
                     "optimizer_state_dict": agent.optimizer.state_dict(),
-                    "memory": agent.memory,
+                    "epsilon": agent.epsilon,
                     "episode": episode},
                    self.config["weights_path"])
 
