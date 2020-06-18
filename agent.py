@@ -98,7 +98,7 @@ class Agent:
             selected_actions = torch.argmax(q_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions.long()]
 
-            projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones)
+            projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones.long())
             projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
