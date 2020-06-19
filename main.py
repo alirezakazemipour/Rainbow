@@ -1,4 +1,3 @@
-import gym
 from logger import Logger
 from play import Play
 from agent import Agent
@@ -24,28 +23,18 @@ def intro_env():
 
 if __name__ == '__main__':
     params = get_params()
-    test_env = gym.make(params["env_name"])
-    assert 'NoFrameskip' in test_env.spec.id
-
+    test_env = make_atari(params["env_name"])
     n_actions = test_env.action_space.n
-    max_steps = 1000  # test_env._max_episode_steps
+    max_steps = test_env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
-
-    if 'FIRE' in test_env.unwrapped.get_action_meanings():
-        test_env = FireResetEnv(test_env)
-    else:
-        test_env = EpisodicLifeEnv(test_env)
 
     if params["do_intro_env"]:
         intro_env()
 
-    env = gym.make(params["env_name"])
+    env = make_atari(params["env_name"])
     env.seed(123)
-    if 'FIRE' in env.unwrapped.get_action_meanings():
-        env = FireResetEnv(env)
-    else:
-        env = EpisodicLifeEnv(env)
+
     logger = Logger(**params)
     stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
     agent = Agent(n_actions=n_actions,
