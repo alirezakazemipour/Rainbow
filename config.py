@@ -3,7 +3,7 @@ import argparse
 
 def get_params():
     parser = argparse.ArgumentParser(description="Parameters based on the Rainbow paper")
-    parser.add_argument("--lr", default=2.5e-4, type=float, help="The learning rate")
+    parser.add_argument("--lr", default=6.25e-5, type=float, help="The learning rate")
     parser.add_argument("--multi_step_n", default=3, type=int,
                         help="The number of step to take account for multi step learning")
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
@@ -11,7 +11,7 @@ def get_params():
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=100000, type=int, help="Maximum number of episodes to train the agent")
-    parser.add_argument("--env_name", default="MsPacmanNoFrameskip-v4", type=str, help="Name of the environment")
+    parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment")
     parser.add_argument("--interval", default=50, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes")

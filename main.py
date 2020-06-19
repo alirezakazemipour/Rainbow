@@ -8,16 +8,15 @@ import time
 
 def intro_env():
     test_env.reset()
-    for life in range(test_env.ale.lives()):
-        for _ in range(max_steps):
-            a = test_env.env.action_space.sample()
-            _, reward, done, info = test_env.step(a)
-            test_env.env.render()
-            time.sleep(0.005)
-            print(f"reward: {reward}")
-            print(info)
-            if done:
-                break
+    for _ in range(max_steps):
+        a = test_env.env.action_space.sample()
+        _, reward, done, info = test_env.step(a)
+        test_env.env.render()
+        time.sleep(0.005)
+        print(f"reward: {reward}")
+        print(info)
+        if done:
+            break
     test_env.close()
     exit(0)
 
@@ -26,7 +25,7 @@ if __name__ == '__main__':
     params = get_params()
     test_env = make_atari(params["env_name"])
     n_actions = test_env.action_space.n
-    max_steps = test_env._max_episode_steps
+    max_steps = 1400000  # test_env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
@@ -56,36 +55,45 @@ if __name__ == '__main__':
 
     if params["do_train"]:
 
-        for episode in range(min_episode + 1, params["max_episodes"] + 1):
-            s = env.reset()
-            stacked_frames = stack_frames(stacked_frames, s, True)
-            episode_reward = 0
-            episode_loss = 0
-            logger.on()
-            for step in range(1, max_steps + 1):
+        # for episode in range(min_episode + 1, params["max_episodes"] + 1):
+        s = env.reset()
+        stacked_frames = stack_frames(stacked_frames, s, True)
+        episode_reward = 0
+        episode_loss = 0
+        episode = min_episode + 1
+        logger.on()
+        for step in range(1, max_steps + 1):
 
-                stacked_frames_copy = stacked_frames.copy()
-                action = agent.choose_action(stacked_frames_copy)
-                s_, r, d, _ = env.step(action)
-                stacked_frames = stack_frames(stacked_frames, s_, False)
-                r = np.clip(r, -1.0, 1.0)
-                agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.render()
-                # time.sleep(0.005)
-                if step % params["train_period"]:
-                    loss = agent.train()
-                    episode_loss += loss
+            stacked_frames_copy = stacked_frames.copy()
+            action = agent.choose_action(stacked_frames_copy)
+            s_, r, d, _ = env.step(action)
+            stacked_frames = stack_frames(stacked_frames, s_, False)
+            r = np.clip(r, -1.0, 1.0)
+            agent.store(stacked_frames_copy, action, r, stacked_frames, d)
+            # env.render()
+            # time.sleep(0.005)
+            if step % params["train_period"] == 0:
+                loss = agent.train()
+                episode_loss += loss
 
-                episode_reward += r
-                if d:
-                    break
+            if step % 5000:
+                agent.hard_update_of_target_network()
 
-            logger.off()
-            if params["train_from_scratch"]:
-                agent.update_epsilon(episode)
-            logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
-            if episode % params["interval"] == 0:
-                logger.save_weights(episode, agent)
+            episode_reward += r
+            if d:
+                logger.off()
+                if params["train_from_scratch"]:
+                    agent.update_epsilon(episode)
+                logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
+                if episode % params["interval"] == 0:
+                    logger.save_weights(episode, agent)
+
+                episode += 1
+                s = env.reset()
+                stacked_frames = stack_frames(stacked_frames, s, True)
+                episode_reward = 0
+                episode_loss = 0
+                logger.on()
 
     else:
         episode = params["max_episodes"]
