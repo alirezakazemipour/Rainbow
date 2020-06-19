@@ -9,7 +9,7 @@ def rgb2gray(img):
 def preprocessing(img):
     img = rgb2gray(img)  # / 255.0 # Do it later in order to open up more RAM !!!!
     img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_AREA)
-    return img
+    return img.T
 
 
 def stack_frames(stacked_frames, state, is_new_episode):
@@ -98,6 +98,12 @@ class EpisodicLifeEnv(RepeatActionEnv):
     def render(self):
         self.env.render()
 
+    def close(self):
+        self.env.close()
+
+    def seed(self, seed):
+        self.env.seed(seed)
+
 
 class FireResetEnv(EpisodicLifeEnv):
     def __init__(self, env):
@@ -120,3 +126,9 @@ class FireResetEnv(EpisodicLifeEnv):
 
     def render(self):
         super().render()
+
+    def close(self):
+        super().close()
+
+    def seed(self, seed):
+        super().seed(seed)

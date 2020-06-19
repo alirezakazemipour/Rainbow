@@ -28,7 +28,7 @@ if __name__ == '__main__':
     assert 'NoFrameskip' in test_env.spec.id
 
     n_actions = test_env.action_space.n
-    max_steps = test_env._max_episode_steps
+    max_steps = 1000  # test_env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
@@ -91,7 +91,8 @@ if __name__ == '__main__':
                     break
 
             logger.off()
-            agent.update_epsilon(episode)
+            if params["train_from_scratch"]:
+                agent.update_epsilon(episode)
             logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
             if episode % params["interval"] == 0:
                 logger.save_weights(episode, agent)

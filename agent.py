@@ -43,7 +43,7 @@ class Agent:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).byte().to(self.device)
             with torch.no_grad():
-                action = self.online_model(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
+                action = self.online_model(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
         Logger.simulation_steps += 1
         return action
@@ -77,9 +77,9 @@ class Agent:
         rewards = torch.cat(batch.reward).to(self.device).view((-1, 1))
         next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
         dones = torch.cat(batch.done).to(self.device).view((-1, 1))
-        states = states.permute(dims=[0, 3, 2, 1])
+        states = states.permute(dims=[0, 3, 1, 2])
         actions = actions.view((-1, 1))
-        next_states = next_states.permute(dims=[0, 3, 2, 1])
+        next_states = next_states.permute(dims=[0, 3, 1, 2])
         return states, actions, rewards, next_states, dones
 
     def train(self):
@@ -104,9 +104,9 @@ class Agent:
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
-        # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        if self.update_counter % 5000 == 0:
-            self.hard_update_of_target_network()
+        self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
+        # if self.update_counter % 5000 == 0:
+        #     self.hard_update_of_target_network()
 
         self.update_counter += 1
         return dqn_loss.detach().cpu().numpy()
@@ -117,6 +117,5 @@ class Agent:
         self.online_model.eval()
 
     def update_epsilon(self, episode):
-        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)\
-            if len(self.memory) > 10000 else 1.0
-
+        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)  # \
+        # if len(self.memory) > 10000 else 1.0

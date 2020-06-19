@@ -20,7 +20,7 @@ def get_params():
     parser.add_argument("--do_train", action="store_false", help="The flag determines whether to train"
                                                                  "the agent or play with it")
     parser.add_argument("--train_from_scratch", action="store_false", help="The flag determines whether to train"
-                                                                           "from scratch or continue previous tries")
+                                                                        "from scratch or continue previous tries")
     parser.add_argument("--V_min", default=-10, type=int, help="Lower bound of the value estimation of"
                                                                "the distributional algorithm")
     parser.add_argument("--V_max", default=10, type=int, help="Upper bound of the value estimation of"
