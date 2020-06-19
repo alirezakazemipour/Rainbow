@@ -8,15 +8,16 @@ import time
 
 def intro_env():
     test_env.reset()
-    for _ in range(max_steps):
-        a = test_env.env.action_space.sample()
-        _, reward, done, info = test_env.step(a)
-        test_env.env.render()
-        time.sleep(0.005)
-        print(f"reward: {reward}")
-        print(info)
-        if done:
-            break
+    for life in range(test_env.ale.lives()):
+        for _ in range(max_steps):
+            a = test_env.env.action_space.sample()
+            _, reward, done, info = test_env.step(a)
+            test_env.env.render()
+            time.sleep(0.005)
+            print(f"reward: {reward}")
+            print(info)
+            if done:
+                break
     test_env.close()
     exit(0)
 

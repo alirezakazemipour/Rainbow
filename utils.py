@@ -63,6 +63,12 @@ class NoopResetEnv:
     def step(self, action):
         return self.env.step(action)
 
+    def render(self):
+        self.env.render()
+
+    def close(self):
+        self.env.close()
+
     def seed(self, seed):
         self.env.seed(seed)
 
@@ -94,6 +100,12 @@ class RepeatActionEnv:
         state = self.successive_frame.max(axis=0)
         return state, reward, done, info
 
+    def render(self):
+        self.env.render()
+
+    def close(self):
+        self.env.close()
+
     def seed(self, seed):
         self.env.seed(seed)
 
@@ -101,6 +113,7 @@ class RepeatActionEnv:
 class EpisodicLifeEnv:
     def __init__(self, env):
         self.env = env
+        self.ale = self.env.ale
         self.unwrapped = self.env.unwrapped
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
@@ -125,6 +138,12 @@ class EpisodicLifeEnv:
         self.lives = self.env.ale.lives()
         return state
 
+    def render(self):
+        self.env.render()
+
+    def close(self):
+        self.env.close()
+
     def seed(self, seed):
         self.env.seed(seed)
 
@@ -132,6 +151,7 @@ class EpisodicLifeEnv:
 class FireResetEnv:
     def __init__(self, env):
         self.env = env
+        self.ale = self.env.ale
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
