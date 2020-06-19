@@ -104,9 +104,9 @@ class Agent:
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
-        self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        # if self.update_counter % 5000 == 0:
-        #     self.hard_update_of_target_network()
+        # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
+        if Logger.simulation_steps % 10000 == 0:
+            self.hard_update_of_target_network()
 
         self.update_counter += 1
         return dqn_loss.detach().cpu().numpy()
