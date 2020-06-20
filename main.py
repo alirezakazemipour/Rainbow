@@ -76,8 +76,9 @@ if __name__ == '__main__':
                 loss = agent.train()
                 episode_loss += loss
 
-            if step % 5000:
-                agent.hard_update_of_target_network()
+            # if step % 5000:
+            #     agent.hard_update_of_target_network()
+            agent.soft_update_of_target_network()
 
             episode_reward += r
             if d:

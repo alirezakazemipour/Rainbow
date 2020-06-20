@@ -27,12 +27,10 @@ class Agent:
 
         self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
-        self.target_model.load_state_dict(self.online_model.state_dict())
-        self.target_model.eval()
+        self.hard_update_of_target_network()
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
         self.loss_fn = nn.MSELoss()
-
 
     def choose_action(self, state):
 
@@ -57,11 +55,10 @@ class Agent:
         done = torch.BoolTensor([done])
         self.memory.add(state, action, reward, next_state, done)
 
-    @staticmethod
-    def soft_update_of_target_network(local_model, target_model, tau=0.001):
-        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+    def soft_update_of_target_network(self, tau=0.001):
+        for target_param, local_param in zip(self.target_model.parameters(), self.online_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
-        target_model.eval()
+        self.target_model.eval()
 
     def hard_update_of_target_network(self):
         self.target_model.load_state_dict(self.online_model.state_dict())
@@ -100,12 +97,10 @@ class Agent:
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
+        # torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
-        # if Logger.simulation_steps % 10000 == 0:
-        #     self.hard_update_of_target_network()
 
         return dqn_loss.detach().cpu().numpy()
 
