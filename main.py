@@ -25,7 +25,7 @@ if __name__ == '__main__':
     params = get_params()
     test_env = make_atari(params["env_name"])
     n_actions = test_env.action_space.n
-    max_steps = 2000000  # test_env._max_episode_steps
+    max_steps = int(10e7)  # test_env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
@@ -74,10 +74,9 @@ if __name__ == '__main__':
             # time.sleep(0.005)
             if step % params["train_period"] == 0:
                 loss += agent.train()
-
+            agent.soft_update_of_target_network()
             # if step % 5000:
             #     agent.hard_update_of_target_network()
-            agent.soft_update_of_target_network()
 
             if done:
                 logger.off()

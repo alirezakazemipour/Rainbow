@@ -59,7 +59,7 @@ class Logger:
         if len(self.last_10_ep_rewards) == self.moving_avg_window:
             last_10_ep_rewards = np.convolve(self.last_10_ep_rewards, self.moving_weights, 'valid')
         else:
-            last_10_ep_rewards = 0  # It is not correct but it is insignificant.
+            last_10_ep_rewards = 0  # It is not correct but does not matter.
 
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.98 * self.to_gb(memory.total)
