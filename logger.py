@@ -19,7 +19,6 @@ class Logger:
         self.running_reward = 0
         self.running_loss = 0
         self.max_episode_reward = -np.inf
-        self.avg_episode_reward = 0
         self.moving_avg_window = 10
         self.moving_weights = np.repeat(1.0, self.moving_avg_window) / self.moving_avg_window
         self.last_10_ep_rewards = deque(maxlen=10)
@@ -48,7 +47,6 @@ class Logger:
         episode, episode_reward, loss, step = args
 
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
-        self.avg_episode_reward = (self.avg_episode_reward + episode_reward) / episode
 
         if self.running_reward == 0:
             self.running_reward = episode_reward
@@ -61,7 +59,7 @@ class Logger:
         if len(self.last_10_ep_rewards) == self.moving_avg_window:
             last_10_ep_rewards = np.convolve(self.last_10_ep_rewards, self.moving_weights, 'valid')
         else:
-            last_10_ep_rewards = 0
+            last_10_ep_rewards = 0  # It is not correct but it is insignificant.
 
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.98 * self.to_gb(memory.total)
@@ -94,7 +92,6 @@ class Logger:
         with SummaryWriter("./logs/" + self.log_dir) as writer:
             writer.add_scalar("Episode running reward", self.running_reward, episode)
             writer.add_scalar("Max episode reward", self.max_episode_reward, episode)
-            writer.add_scalar("Average episode reward", self.avg_episode_reward, episode)
             writer.add_scalar("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
             writer.add_scalar("Loss", loss, episode)
 
