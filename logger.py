@@ -16,13 +16,12 @@ running_loss = 0
 
 
 class Logger:
-    simulation_steps = 0
-
-    def __init__(self, **config):
+    def __init__(self, agent, **config):
         self.config = config
-        self.moving_avg_window = 5
+        self.agent = agent
         self.log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.create_wights_folder()
+        self.moving_avg_window = 5
         self.min_episode_reward = np.inf
         self.max_episode_reward = -np.inf
         self.avg_episode_reward = -np.inf
@@ -43,7 +42,7 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, step, memory_length, epsilon = args
+        episode, episode_reward, loss, step = args
         # episodes_rewards.append(episode_reward)
         #
         # self.min_episode_reward = min(self.min_episode_reward, episode_reward)
@@ -92,16 +91,16 @@ class Logger:
                                    running_reward,
                                    running_loss,
                                    self.duration,
-                                   epsilon,
-                                   memory_length,
+                                   self.agent.epsilon,
+                                   len(self.agent.memory),
                                    self.duration / (step / episode),
                                    self.to_gb(memory.used),
                                    self.to_gb(memory.total),
                                    datetime.datetime.now().strftime("%H:%M:%S")
                                    ))
         with SummaryWriter("./logs/" + self.log_dir) as writer:
-            writer.add_scalar("Loss", loss, self.simulation_steps)
-            writer.add_scalar("Episode running reward", running_reward, self.simulation_steps)
+            writer.add_scalar("Loss", loss, episode)
+            writer.add_scalar("Episode running reward", running_reward, episode)
             # writer.add_hparams({
             #     "lr": 0.005},
             #     {"hparam/loss": loss})
@@ -116,10 +115,10 @@ class Logger:
         #                                     self.avg_steps_reward,
         #                                     ))
 
-    def save_weights(self, episode, agent):
-        torch.save({"online_model_state_dict": agent.online_model.state_dict(),
-                    "optimizer_state_dict": agent.optimizer.state_dict(),
-                    "epsilon": agent.epsilon,
+    def save_weights(self, episode):
+        torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
+                    "optimizer_state_dict": self.agent.optimizer.state_dict(),
+                    "epsilon": self.agent.epsilon,
                     "episode": episode},
                    self.config["weights_path"])
 

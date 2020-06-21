@@ -6,17 +6,12 @@ from logger import Logger
 import numpy as np
 from replay_memory import ReplayMemory, Transition
 
-if torch.cuda.is_available():
-    torch.backends.cudnn.deterministic = True
-    torch.cuda.empty_cache()
-
 
 class Agent:
     def __init__(self, n_actions, state_shape, **config):
         self.config = config
         self.n_actions = n_actions
         self.state_shape = state_shape
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
         self.tau = self.config["tau"]
@@ -24,6 +19,13 @@ class Agent:
         self.decay_rate = self.config["decay_rate"]
         self.min_epsilon = self.config["min_epsilon"]
         self.memory = ReplayMemory(self.config["mem_size"])
+
+        if torch.cuda.is_available():
+            torch.backends.cudnn.deterministic = True
+            torch.cuda.empty_cache()
+            self.device = torch.device("cuda")
+        else:
+            self.device = torch.device("cpu")
 
         self.online_model = Model(self.state_shape, self.n_actions).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions).to(self.device)
@@ -42,7 +44,6 @@ class Agent:
             with torch.no_grad():
                 action = self.online_model(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
-        Logger.simulation_steps += 1
         return action
 
     def store(self, state, action, reward, next_state, done):
@@ -65,7 +66,6 @@ class Agent:
         self.target_model.eval()
 
     def unpack_batch(self, batch):
-
         batch = Transition(*zip(*batch))
 
         states = torch.cat(batch.state).to(self.device).view(self.config["batch_size"], *self.state_shape)
@@ -98,11 +98,9 @@ class Agent:
         self.optimizer.zero_grad()
         dqn_loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
-        for param in self.online_model.parameters():
-            param.grad.data.clamp_(-1, 1)
+        # for param in self.online_model.parameters():
+        #     param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
-
-        # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)
 
         return dqn_loss.detach().cpu().numpy()
 

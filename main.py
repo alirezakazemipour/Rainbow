@@ -35,11 +35,11 @@ if __name__ == '__main__':
     env = make_atari(params["env_name"])
     env.seed(123)
 
-    logger = Logger(**params)
-    stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
+    stacked_frames = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
     agent = Agent(n_actions=n_actions,
                   state_shape=[84, 84, 4],
                   **params)
+    logger = Logger(agent, **params)
 
     if not params["train_from_scratch"]:
         chekpoint = logger.load_weights()
@@ -85,9 +85,9 @@ if __name__ == '__main__':
                 logger.off()
                 if params["train_from_scratch"]:
                     agent.update_epsilon(episode)
-                logger.log(episode, episode_reward, episode_loss, step, len(agent.memory), agent.epsilon)
+                logger.log(episode, episode_reward, episode_loss, step)
                 if episode % params["interval"] == 0:
-                    logger.save_weights(episode, agent)
+                    logger.save_weights(episode)
 
                 episode += 1
                 s = env.reset()
