@@ -86,8 +86,6 @@ if __name__ == '__main__':
                 if params["train_from_scratch"]:
                     agent.update_epsilon(episode)
                 logger.log(episode, episode_reward, episode_loss, step)
-                if episode % params["interval"] == 0:
-                    logger.save_weights(episode)
 
                 episode += 1
                 s = env.reset()
