@@ -79,7 +79,7 @@ class Agent:
         return states, actions, rewards, next_states, dones
 
     def train(self):
-        if len(self.memory) < 10000:
+        if len(self.memory) < self.batch_size:
             return 0  # as no loss
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
@@ -98,6 +98,8 @@ class Agent:
         self.optimizer.zero_grad()
         dqn_loss.backward()
         # torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
+        for param in self.online_model.parameters():
+            param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
         # self.soft_update_of_target_network(self.online_model, self.target_model, self.tau)

@@ -7,7 +7,7 @@ def get_params():
     parser.add_argument("--multi_step_n", default=3, type=int,
                         help="The number of step to take account for multi step learning")
     parser.add_argument("--batch_size", default=32, type=int, help="The batch size")
-    parser.add_argument("--mem_size", default=40000, type=int, help="The memory size")
+    parser.add_argument("--mem_size", default=55000, type=int, help="The memory size")
     parser.add_argument("--gamma", default=0.99, type=float, help="The discount factor")
     parser.add_argument("--tau", default=0.001, type=float, help="Soft update exponential rate")
     parser.add_argument("--max_episodes", default=100000, type=int, help="Maximum number of episodes to train the agent")

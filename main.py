@@ -25,7 +25,7 @@ if __name__ == '__main__':
     params = get_params()
     test_env = make_atari(params["env_name"])
     n_actions = test_env.action_space.n
-    max_steps = 1400000  # test_env._max_episode_steps
+    max_steps = 2000000  # test_env._max_episode_steps
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{n_actions}")
 
