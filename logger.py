@@ -13,7 +13,7 @@ running_loss = 0
 
 
 # episodes_rewards = []
-
+# TODO -> Log hyperparams!!
 
 class Logger:
     def __init__(self, agent, **config):

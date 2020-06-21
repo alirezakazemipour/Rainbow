@@ -48,6 +48,8 @@ class Agent:
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
+        assert state.dtype == "uint8"
+        assert next_state.dtype == "uint8"
 
         state = from_numpy(state).byte().to("cpu")
         reward = torch.CharTensor([reward])
@@ -110,5 +112,4 @@ class Agent:
         self.online_model.eval()
 
     def update_epsilon(self, episode):
-        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)  # \
-        # if len(self.memory) > 10000 else 1.0
+        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)

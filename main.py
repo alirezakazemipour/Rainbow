@@ -35,7 +35,6 @@ if __name__ == '__main__':
     env = make_atari(params["env_name"])
     env.seed(123)
 
-    stacked_frames = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
     agent = Agent(n_actions=n_actions,
                   state_shape=[84, 84, 4],
                   **params)
@@ -56,6 +55,7 @@ if __name__ == '__main__':
     if params["do_train"]:
 
         # for episode in range(min_episode + 1, params["max_episodes"] + 1):
+        stacked_frames = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
         s = env.reset()
         stacked_frames = stack_frames(stacked_frames, s, True)
         episode_reward = 0
