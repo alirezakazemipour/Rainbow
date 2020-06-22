@@ -2,7 +2,6 @@ from torch import nn, from_numpy
 import torch
 from model import Model
 from torch.optim.adam import Adam
-from logger import Logger
 import numpy as np
 from replay_memory import ReplayMemory, Transition
 
@@ -106,10 +105,10 @@ class Agent:
 
         return dqn_loss.detach().cpu().numpy()
 
-    def ready_to_play(self, path):
-        model_state_dict, _ = Logger.load_weights(path)
-        self.online_model.load_state_dict(model_state_dict)
+    def ready_to_play(self, state_dict):
+        self.online_model.load_state_dict(state_dict)
         self.online_model.eval()
+        self.epsilon = self.min_epsilon
 
     def update_epsilon(self, episode):
         self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)

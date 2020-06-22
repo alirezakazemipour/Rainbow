@@ -10,12 +10,12 @@ def intro_env():
     test_env.reset()
     for _ in range(max_steps):
         a = test_env.env.action_space.sample()
-        _, reward, done, info = test_env.step(a)
+        _, r, d, info = test_env.step(a)
         test_env.env.render()
         time.sleep(0.005)
-        print(f"reward: {reward}")
+        print(f"reward: {r}")
         print(info)
-        if done:
+        if d:
             break
     test_env.close()
     exit(0)
@@ -92,11 +92,9 @@ if __name__ == '__main__':
                 logger.on()
 
     else:
-        episode = params["max_episodes"]
-        step = max_steps
         # region play
-        play_path = "./models/" + logger.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-        player = Play(agent, env, play_path)
+        chekpoint = logger.load_weights()
+        player = Play(agent, env, chekpoint["online_model_state_dict"])
         player.evaluate()
         # endregion
 

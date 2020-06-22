@@ -41,6 +41,7 @@ class NoopResetEnv:
         self.noop_action = 0
         self.env = env
         self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
         self.ale = self.env.ale
@@ -77,6 +78,7 @@ class RepeatActionEnv:
     def __init__(self, env):
         self.env = env
         self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
         self.ale = self.env.ale
@@ -115,6 +117,7 @@ class EpisodicLifeEnv:
         self.env = env
         self.ale = self.env.ale
         self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
         self.natural_done = True
@@ -151,6 +154,7 @@ class EpisodicLifeEnv:
 class FireResetEnv:
     def __init__(self, env):
         self.env = env
+        self.observation_space = env.observation_space
         self.ale = self.env.ale
         self.action_space = self.env.action_space
         self._max_episode_steps = self.env._max_episode_steps
@@ -178,3 +182,5 @@ class FireResetEnv:
 
     def seed(self, seed):
         self.env.seed(seed)
+
+gym.Wrapper
