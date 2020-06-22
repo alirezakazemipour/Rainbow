@@ -1,108 +1,101 @@
-import gym_moving_dot
-import gym
-import numpy as np
-from skimage.transform import resize
-from logger import LOG
+from logger import Logger
 from play import Play
-
 from agent import Agent
-
-# ENV_NAME = "MovingDotDiscrete-v0"
-# ENV_NAME = "MontezumaRevenge-v0"
-ENV_NAME = "Breakout-v0"
-MAX_EPISODES = 20
-MAX_STEPS = 1000
-save_interval = 200
-log_interval = 1  # TODO has conflicts with save interval when loading for playing is needed
-
-episode_log = LOG()
-
-TRAIN = True
+from utils import *
+from config import get_params
+import time
 
 
-def rgb2gray(img):
-    return 0.2125 * img[..., 0] + 0.7154 * img[..., 1] + 0.0721 * img[..., 2]
-
-
-def preprocessing(img):
-    img = rgb2gray(img) / 255.0
-    img = resize(img, output_shape=[84, 84])
-    return img
-
-
-def stack_frames(stacked_frames, state, is_new_episode):
-    frame = preprocessing(state)
-
-    if is_new_episode:
-        stacked_frames = np.stack([frame for _ in range(4)], axis=2)
-    else:
-        stacked_frames = stacked_frames[..., :3]
-        stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=2)], axis=2)
-    return stacked_frames
+def intro_env():
+    test_env.reset()
+    for _ in range(max_steps):
+        a = test_env.env.action_space.sample()
+        _, r, d, info = test_env.step(a)
+        test_env.env.render()
+        time.sleep(0.005)
+        print(f"reward: {r}")
+        print(info)
+        if d:
+            break
+    test_env.close()
+    exit(0)
 
 
 if __name__ == '__main__':
+    params = get_params()
+    test_env = make_atari(params["env_name"])
+    n_actions = test_env.action_space.n
+    max_steps = int(10e7)  # test_env._max_episode_steps
+    print(f"Environment: {params['env_name']}\n"
+          f"Number of actions:{n_actions}")
 
-    env = gym.make(ENV_NAME)
-    n_actions = env.action_space.n
-    stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
-    agent = Agent(n_actions=n_actions, gamma=0.99, lr=6.25e-5,
-                  tau=0.001, state_shape=[84, 84, 4], capacity=39000,
-                  alpha=0.99, epsilon_start=0.9, epsilon_end=0.05,
-                  epsilon_decay=500, batch_size=32)
-    if TRAIN:
+    if params["do_intro_env"]:
+        intro_env()
 
-        for episode in range(1, MAX_EPISODES + 1):
-            s = env.reset()
-            stacked_frames = stack_frames(stacked_frames, s, True)
-            episode_reward = 0
-            episode_loss = 0
+    env = make_atari(params["env_name"])
+    env.seed(123)
 
-            episode_log.on()
+    agent = Agent(n_actions=n_actions, state_shape=[84, 84, 4], **params)
+    logger = Logger(agent, **params)
 
-            for step in range(1, MAX_STEPS + 1):
+    if not params["train_from_scratch"]:
+        chekpoint = logger.load_weights()
+        agent.online_model.load_state_dict(chekpoint["online_model_state_dict"])
+        agent.hard_update_of_target_network()
+        agent.epsilon = chekpoint["epsilon"]
+        min_episode = chekpoint["episode"]
 
-                stacked_frames_copy = stacked_frames.copy()
-                action = agent.choose_action(stacked_frames_copy)
-                s_, r, d, _ = env.step(action)
-                stacked_frames = stack_frames(stacked_frames, s_, False)
-                r = np.clip(r, -1.0, 1.0)
-                agent.store(stacked_frames_copy, action, r, stacked_frames, d)
-                # env.render()
-                if step % 4 == 0:
-                    loss = agent.train()
-                    episode_loss += loss
-                else:
-                    episode_loss += 0
-                episode_reward += r
+        print("Keep training from previous run.")
+    else:
+        min_episode = 0
+        print("Train from scratch.")
 
-                # if step % save_interval == 0:
-                #     episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
+    if params["do_train"]:
 
-                if d:
-                    break
+        # for episode in range(min_episode + 1, params["max_episodes"] + 1):
+        stacked_states = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
+        state = env.reset()
+        stacked_states = stack_states(stacked_states, state, True)
+        episode_reward = 0
+        loss = 0
+        episode = min_episode + 1
+        logger.on()
+        for step in range(1, max_steps + 1):
 
-            episode_log.off()
-            if episode % log_interval == 0:
-                episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
-        episode_log.printer(episode, episode_reward, episode_loss, agent.eps_threshold, step)
-        episode_log.save_weights(agent.eval_model, agent.optimizer, episode, step)
-    # else:
-    episode = MAX_EPISODES
-    step = MAX_STEPS
-    # region play
-    # play_path = "./models/" + episode_log.dir + "/" "episode" + str(episode) + "-" + "step" + str(step)
-    play_path = "/content/drive/My Drive/Colab Notebooks/Rainbow/models/2020-02-16-10-48-38/episode450-step1000"
-    player = Play(agent, env, play_path)
-    player.evaluate()
-    # endregion
+            stacked_states_copy = stacked_states.copy()
+            action = agent.choose_action(stacked_states_copy)
+            next_state, reward, done, _ = env.step(action)
+            stacked_states = stack_states(stacked_states, next_state, False)
+            reward = np.clip(reward, -1.0, 1.0)
+            agent.store(stacked_states_copy, action, reward, stacked_states, done)
+            episode_reward += reward
 
-# for _ in range(100):
-#     test_env.reset()
-#     done = False
-#     while not done:
-#         a =test_env.action_space.sample()
-#         _, r, done, _ = test_env.step(a)
-#         print(r)
-#         test_env.render()
-#         x = input()
+            # env.render()
+            # time.sleep(0.005)
+            if step % params["train_period"] == 0:
+                loss += agent.train()
+            agent.soft_update_of_target_network()
+            # if step % 5000:
+            #     agent.hard_update_of_target_network()
+
+            if done:
+                logger.off()
+                if params["train_from_scratch"]:
+                    agent.update_epsilon(episode)
+                logger.log(episode, episode_reward, loss, step)
+
+                episode += 1
+                state = env.reset()
+                stacked_frames = stack_states(stacked_states, state, True)
+                episode_reward = 0
+                episode_loss = 0
+                logger.on()
+
+    else:
+        # region play
+        chekpoint = logger.load_weights()
+        player = Play(agent, env, chekpoint["online_model_state_dict"])
+        player.evaluate()
+        # endregion
+
+# Breakout showed sings of learning after 5000 episodes!!!!

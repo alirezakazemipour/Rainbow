@@ -1,5 +1,4 @@
 import random
-
 from collections import namedtuple
 
 Transition = namedtuple('Transition',
@@ -7,11 +6,11 @@ Transition = namedtuple('Transition',
 
 
 class ReplayMemory:
-    def __init__(self, capacity):
+    def __init__(self, capacity, ):
         self.capacity = capacity
         self.memory = []
 
-    def push(self, *item):
+    def add(self, *item):
         self.memory.append(Transition(*item))
         if len(self.memory) > self.capacity:
             self.memory.pop(0)
@@ -22,6 +21,3 @@ class ReplayMemory:
 
     def __len__(self):
         return len(self.memory)
-
-
-
