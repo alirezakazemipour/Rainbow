@@ -1,4 +1,4 @@
-from torch import nn, from_numpy
+from torch import from_numpy
 import torch
 from model import Model
 from torch.optim.adam import Adam
@@ -95,10 +95,10 @@ class Agent:
         with torch.no_grad():
             q_eval_next = self.online_model.get_q_value(next_states)
             selected_actions = torch.argmax(q_eval_next, dim=-1)
-            q_next = self.target_model(next_states)[range(self.batch_size), selected_actions.long()]
+            q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
             projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones.byte())
-            projected_atoms = projected_atoms.clamp_(self.v_min, self.v_max)
+            projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
             lower_bound = b.floor().long()
