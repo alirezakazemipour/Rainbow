@@ -1,34 +1,36 @@
-import torch
-import numpy as np
-from skimage.transform import resize
 from utils import *
 
 
 class Play:
-    def __init__(self, agent, env, path):
-        torch.cuda.empty_cache()
+    def __init__(self, agent, env, weights):
         self.agent = agent
-        self.path = path
-        self.agent.ready_to_play(self.path)
+        self.weights = weights
+        self.agent.ready_to_play(self.weights)
         self.env = env
-        self.stacked_frames = np.zeros(shape=[84, 84, 4], dtype='float32')
+        self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        self.VideoWriter = cv2.VideoWriter('output.avi', self.fourcc, 50.0, (160, 210))
 
     def evaluate(self):
-
+        stacked_states = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
+        total_reward = 0
         print("--------Play mode--------")
-        for _ in range(5):
+        for _ in range(1):
             done = 0
             state = self.env.reset()
-            total_reward = 0
-            self.stacked_frames = self.stack_frames(self.stacked_frames, state, True)
+            episode_reward = 0
+            stacked_states = stack_states(stacked_states, state, True)
 
             while not done:
-                stacked_frames_copy = self.stacked_frames.copy()
-                action = self.agent.get_action(stacked_frames_copy)
+                stacked_frames_copy = stacked_states.copy()
+                action = self.agent.choose_action(stacked_frames_copy)
                 next_state, r, done, _ = self.env.step(action)
-                self.stacked_frames = self.stack_frames(self.stacked_frames, next_state, False)
+                stacked_states = stack_states(stacked_states, next_state, False)
                 self.env.render()
-                total_reward += r
+                episode_reward += r
+                self.VideoWriter.write(cv2.cvtColor(next_state, cv2.COLOR_RGB2BGR))
+            total_reward += episode_reward
 
-            print("Total episode reward:", total_reward)
+        print("Total episode reward:", total_reward)
         self.env.close()
+        self.VideoWriter.release()
+        cv2.destroyAllWindows()
