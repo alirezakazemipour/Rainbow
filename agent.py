@@ -103,6 +103,8 @@ class Agent:
             b = (projected_atoms - self.v_min) / self.delta_z
             lower_bound = b.floor().long()
             upper_bound = b.ceil().long()
+            lower_bound[(upper_bound > 0) * (lower_bound == upper_bound)] -= 1
+            upper_bound[(lower_bound < (self.n_atoms - 1)) * (lower_bound == upper_bound)] += 1
 
             # projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
             # for i in range(self.batch_size):
