@@ -31,6 +31,8 @@ class Agent:
         self.n_atoms = self.config["n_atoms"]
         self.support = torch.linspace(self.v_min, self.v_max, self.n_atoms).to(self.device)
         self.delta_z = (self.v_max - self.v_min) / (self.n_atoms - 1)
+        self.offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
+            .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
 
         self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
@@ -91,8 +93,8 @@ class Agent:
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
 
         with torch.no_grad():
-            q_next = self.target_model.get_q_value(next_states)
-            selected_actions = torch.argmax(q_next, dim=-1)
+            q_eval_next = self.online_model.get_q_value(next_states)
+            selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions.long()]
 
             projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones.byte())
@@ -108,13 +110,10 @@ class Agent:
             #         projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
             #         projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
 
-            offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
-                .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
-
             projected_dist = torch.zeros(q_next.size()).to(self.device)
-            projected_dist.view(-1).index_add_(0, (lower_bound + offset).view(-1),
+            projected_dist.view(-1).index_add_(0, (lower_bound + self.offset).view(-1),
                                                (q_next * (upper_bound.float() - b)).view(-1))
-            projected_dist.view(-1).index_add_(0, (upper_bound + offset).view(-1),
+            projected_dist.view(-1).index_add_(0, (upper_bound + self.offset).view(-1),
                                                (q_next * (b - lower_bound.float())).view(-1))
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
