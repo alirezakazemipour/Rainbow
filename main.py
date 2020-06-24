@@ -73,7 +73,8 @@ if __name__ == '__main__':
             # env.render()
             # time.sleep(0.005)
             if step % params["train_period"] == 0:
-                loss += agent.train()
+                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / 1500)
+                loss += agent.train(beta)
             agent.soft_update_of_target_network()
             # if step % 5000:
             #     agent.hard_update_of_target_network()

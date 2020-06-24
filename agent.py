@@ -1,9 +1,9 @@
-from torch import nn, from_numpy
+from torch import from_numpy
 import torch
 from model import Model
 from torch.optim.adam import Adam
 import numpy as np
-from replay_memory import ReplayMemory, Transition
+from Memory.replay_memory import ReplayMemory, Transition
 
 
 class Agent:
@@ -17,7 +17,7 @@ class Agent:
         self.epsilon = self.config["epsilon"]
         self.decay_rate = self.config["decay_rate"]
         self.min_epsilon = self.config["min_epsilon"]
-        self.memory = ReplayMemory(self.config["mem_size"])
+        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
 
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
@@ -86,11 +86,12 @@ class Agent:
         next_states = next_states.permute(dims=[0, 3, 1, 2])
         return states, actions, rewards, next_states, dones
 
-    def train(self):
+    def train(self, beta):
         if len(self.memory) < self.batch_size:
             return 0  # as no loss
-        batch = self.memory.sample(self.batch_size)
+        batch, weights, indices = self.memory.sample(self.batch_size, beta)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
+        weights = from_numpy(weights).float().to(self.device)
 
         with torch.no_grad():
             q_eval_next = self.online_model.get_q_value(next_states)
@@ -119,7 +120,10 @@ class Agent:
                                                (q_next * (b - lower_bound.float())).view(-1))
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
-        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1).mean()
+        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1)
+        td_error = dqn_loss.abs() + 1e-3
+        self.memory.update_priorities(indices, td_error.detach().cpu().numpy())
+        dqn_loss = (dqn_loss * weights).mean()
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
