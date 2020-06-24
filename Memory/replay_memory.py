@@ -28,8 +28,8 @@ class ReplayMemory:
         self.tree_ptr = self.tree_ptr + 1 if self.tree_ptr + 1 <= self.capacity - 1 else self.capacity - 1
         if len(self.memory) > self.capacity:
             self.memory.pop(0)
-            self.sum_tree[self.tree_ptr] = self.sum_tree[1:]
-            self.min_tree[self.tree_ptr] = self.min_tree[1:]
+            self.sum_tree.tree = self.sum_tree[1:]
+            self.min_tree.tree = self.min_tree[1:]
         assert len(self.memory) <= self.capacity
 
     def sample(self, batch_size, beta):

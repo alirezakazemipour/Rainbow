@@ -89,6 +89,6 @@ class SumSegmentTree:
             idx //= 2
 
     def __getitem__(self, idx):
-        assert 0 <= idx < self.capacity
+        assert 0 <= idx < self.capacity or type(idx) == slice
         idx += self.capacity
         return self.tree[idx]
