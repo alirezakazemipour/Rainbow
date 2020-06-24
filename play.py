@@ -13,6 +13,8 @@ class Play:
     def evaluate(self):
         stacked_states = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
         total_reward = 0
+        # self.env.reset()
+        # self.env.render()
         print("--------Play mode--------")
         for _ in range(1):
             done = 0

@@ -48,7 +48,7 @@ class Agent:
             state = np.expand_dims(state, axis=0)
             state = from_numpy(state).byte().to(self.device)
             with torch.no_grad():
-                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 2, 1])).argmax(-1).item()
+                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
         return action
 
@@ -58,7 +58,7 @@ class Agent:
         assert next_state.dtype == "uint8"
 
         state = from_numpy(state).byte().to("cpu")
-        reward = torch.CharTensor([reward])
+        reward = torch.FloatTensor([reward])
         action = torch.ByteTensor([action]).to('cpu')
         next_state = from_numpy(next_state).byte().to('cpu')
         done = torch.BoolTensor([done])
