@@ -4,9 +4,9 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(description="Parameters based on the Rainbow paper")
 
-    parser.add_argument("--mem_size", default=55000, type=int, help="The memory size")
+    parser.add_argument("--mem_size", default=35000, type=int, help="The memory size")
     parser.add_argument("--env_name", default="MiniGrid-Empty-6x6-v0", type=str, help="Name of the environment")
-    parser.add_argument("--interval", default=150, type=int,
+    parser.add_argument("--interval", default=200, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes")
     parser.add_argument("--do_train", action="store_false",

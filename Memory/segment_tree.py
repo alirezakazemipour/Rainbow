@@ -5,7 +5,7 @@ class MinSegmentTree:
     def __init__(self, capacity):
         assert capacity > 0 and capacity & (capacity - 1) == 0  # Full binary tree
         self.capacity = capacity
-        self.tree = np.full(2 * self.capacity - 1, np.inf)
+        self.tree = list(np.full(2 * self.capacity - 1, np.inf))
 
     def query(self, start_idx, end_idx, current_node, first_node, last_node):
         if start_idx == first_node and end_idx == last_node:  # If we're on the node that contains what we want.
@@ -16,8 +16,8 @@ class MinSegmentTree:
         elif mid_node + 1 <= start_idx:  # If the range lays completely on the right child
             return self.query(start_idx, end_idx, 2 * current_node + 1, mid_node, last_node)
         else:  # If the range lays partially on the left & right children
-           return min(self.query(start_idx, mid_node, 2 * current_node, first_node, mid_node),  # Left part
-                self.query(mid_node + 1, end_idx, 2 * current_node + 1, mid_node + 1, last_node))  # Right part
+            return min(self.query(start_idx, mid_node, 2 * current_node, first_node, mid_node),  # Left part
+                       self.query(mid_node + 1, end_idx, 2 * current_node + 1, mid_node + 1, last_node))  # Right part
 
     def min(self, start_idx=0, end_idx=None):
         if end_idx is None:
@@ -37,6 +37,7 @@ class MinSegmentTree:
             idx //= 2
 
     def __getitem__(self, idx):
+        assert 0 <= idx < self.capacity
         idx += self.capacity
         return self.tree[idx]
 
@@ -45,7 +46,7 @@ class SumSegmentTree:
     def __init__(self, capacity):
         assert capacity > 0 and capacity & (capacity - 1) == 0  # Full binary tree
         self.capacity = capacity
-        self.tree = np.full(2 * self.capacity - 1, 0)
+        self.tree = list(np.full(2 * self.capacity - 1, 0))
 
     def query(self, start_idx, end_idx, current_node, first_node, last_node):
         if start_idx == first_node and end_idx == last_node:  # If we're on the node that contains what we want.
@@ -57,7 +58,8 @@ class SumSegmentTree:
             return self.query(start_idx, end_idx, 2 * current_node + 1, mid_node, last_node)
         else:  # If the range lays partially on the left & right children
             return self.query(start_idx, mid_node, 2 * current_node, first_node, mid_node) + \
-                 self.query(mid_node + 1, end_idx, 2 * current_node + 1, mid_node + 1, last_node)  # Left + Right parts
+                   self.query(mid_node + 1, end_idx, 2 * current_node + 1, mid_node + 1,
+                              last_node)  # Left + Right parts
 
     def sum(self, start_idx=0, end_idx=None):
         if end_idx is None:
@@ -89,6 +91,6 @@ class SumSegmentTree:
             idx //= 2
 
     def __getitem__(self, idx):
-        assert 0 <= idx < self.capacity or type(idx) == slice
+        assert 0 <= idx < self.capacity
         idx += self.capacity
         return self.tree[idx]

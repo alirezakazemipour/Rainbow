@@ -57,6 +57,7 @@ if __name__ == '__main__':
         state = env.reset()
         stacked_states = stack_states(stacked_states, state, True)
         episode_reward = 0
+        beta = params["beta"]
         loss = 0
         episode = min_episode + 1
         logger.on()
@@ -73,7 +74,7 @@ if __name__ == '__main__':
             # env.render()
             # time.sleep(0.005)
             if step % params["train_period"] == 0:
-                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / 1500)
+                beta = min(1.0, params["beta"] + episode * (1.0 - params["beta"]) / 1000)
                 loss += agent.train(beta)
             agent.soft_update_of_target_network()
             # if step % 5000:
@@ -83,7 +84,7 @@ if __name__ == '__main__':
                 logger.off()
                 if params["train_from_scratch"]:
                     agent.update_epsilon(episode)
-                logger.log(episode, episode_reward, loss, step)
+                logger.log(episode, episode_reward, loss, step, beta)
 
                 episode += 1
                 state = env.reset()
