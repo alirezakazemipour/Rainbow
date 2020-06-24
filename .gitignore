@@ -16,6 +16,7 @@ eggs/
 .idea/
 logs/
 vid/
+models/
 .eggs/
 lib/
 lib64/

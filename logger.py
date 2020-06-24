@@ -68,7 +68,7 @@ class Logger:
             self.save_weights(episode)
 
             print("EP:{}| "
-                  "EP_Reward:{}| "
+                  "EP_Reward:{:.2f}| "
                   "EP_Running_Reward:{:3.3f}| "
                   "Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "
@@ -76,7 +76,8 @@ class Logger:
                   "Memory_Length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
-                  "Time:{}".format(episode,
+                  "Time:{}| "
+                  "Step:{}".format(episode,
                                    episode_reward,
                                    self.running_reward,
                                    self.running_loss,
@@ -86,7 +87,8 @@ class Logger:
                                    self.duration / (step / episode),
                                    self.to_gb(memory.used),
                                    self.to_gb(memory.total),
-                                   datetime.datetime.now().strftime("%H:%M:%S")
+                                   datetime.datetime.now().strftime("%H:%M:%S"),
+                                   step
                                    ))
 
         with SummaryWriter("./logs/" + self.log_dir) as writer:

@@ -5,7 +5,7 @@ def get_params():
     parser = argparse.ArgumentParser(description="Parameters based on the Rainbow paper")
 
     parser.add_argument("--mem_size", default=55000, type=int, help="The memory size")
-    parser.add_argument("--env_name", default="PongNoFrameskip-v4", type=str, help="Name of the environment")
+    parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment")
     parser.add_argument("--interval", default=150, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes")
@@ -35,6 +35,6 @@ def get_params():
                       "decay_rate": 4e-3,
                       "min_epsilon": 0.01
                       }
-    total_params = {**default_params, **vars(parser_params)}
+    total_params = {**vars(parser_params), **default_params}
     print("params:", total_params)
     return total_params
