@@ -182,5 +182,3 @@ class FireResetEnv:
 
     def seed(self, seed):
         self.env.seed(seed)
-
-gym.Wrapper

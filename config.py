@@ -35,6 +35,6 @@ def get_params():
                       "decay_rate": 4e-3,
                       "min_epsilon": 0.01
                       }
-    total_params = {**default_params, **vars(parser_params)}
+    total_params = {**vars(parser_params), **default_params}
     print("params:", total_params)
     return total_params

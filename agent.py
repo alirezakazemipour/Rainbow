@@ -56,6 +56,7 @@ class Agent:
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
+        assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
 
         state = from_numpy(state).byte().to("cpu")
         reward = torch.CharTensor([reward])
