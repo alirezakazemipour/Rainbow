@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .idea/
-Logs/
-Models/
+#Logs/
+#Models/
 Results/
 vid/
 .eggs/
