@@ -75,7 +75,6 @@ class Logger:
                   "EP_Running_Reward:{:3.3f}| "
                   "Running_loss:{:3.3f}| "
                   "EP_Duration:{:3.3f}| "
-                  "Epsilon:{:.3f}| "
                   "Memory_Length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
@@ -86,7 +85,6 @@ class Logger:
                                    self.running_reward,
                                    self.running_loss,
                                    self.duration,
-                                   self.agent.epsilon,
                                    len(self.agent.memory),
                                    self.duration / (step / episode),
                                    self.to_gb(memory.used),
@@ -105,7 +103,7 @@ class Logger:
     def save_weights(self, episode):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
                     "optimizer_state_dict": self.agent.optimizer.state_dict(),
-                    "epsilon": self.agent.epsilon,
+                    # "epsilon": self.agent.epsilon,
                     "episode": episode},
                    "Models/" + self.log_dir + "/params.pth")
 

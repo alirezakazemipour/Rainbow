@@ -15,9 +15,9 @@ class Agent:
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
         self.tau = self.config["tau"]
-        self.epsilon = self.config["epsilon"]
-        self.decay_rate = self.config["decay_rate"]
-        self.min_epsilon = self.config["min_epsilon"]
+        # self.epsilon = self.config["epsilon"]
+        # self.decay_rate = self.config["decay_rate"]
+        # self.min_epsilon = self.config["min_epsilon"]
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
@@ -46,13 +46,13 @@ class Agent:
 
     def choose_action(self, state):
 
-        if np.random.random() < self.epsilon:
-            action = np.random.randint(0, self.n_actions)
-        else:
-            state = np.expand_dims(state, axis=0)
-            state = from_numpy(state).byte().to(self.device)
-            with torch.no_grad():
-                action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
+        # if np.random.random() < self.epsilon:
+        #     action = np.random.randint(0, self.n_actions)
+        # else:
+        state = np.expand_dims(state, axis=0)
+        state = from_numpy(state).byte().to(self.device)
+        with torch.no_grad():
+            action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
 
         return action
 
@@ -141,15 +141,17 @@ class Agent:
         torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
         self.optimizer.step()
 
+        self.online_model.reset()
+        self.target_model.reset()
         return dqn_loss.detach().cpu().numpy()
 
     def ready_to_play(self, state_dict):
         self.online_model.load_state_dict(state_dict)
         self.online_model.eval()
-        self.epsilon = self.min_epsilon
+        # self.epsilon = self.min_epsilon
 
-    def update_epsilon(self, episode):
-        self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)
+    # def update_epsilon(self, episode):
+    #     self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)
 
     def get_nstep_returns(self):
         reward, next_state, done = self.nstep_buffer[-1][-3:]
