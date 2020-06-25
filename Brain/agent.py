@@ -57,10 +57,10 @@ class Agent:
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
-        assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
+        # assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
 
         state = from_numpy(state).byte().to("cpu")
-        reward = torch.CharTensor([reward])
+        reward = torch.FloatTensor([reward])
         action = torch.ByteTensor([action]).to('cpu')
         next_state = from_numpy(next_state).byte().to('cpu')
         done = torch.BoolTensor([done])
@@ -123,7 +123,7 @@ class Agent:
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
         dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1)
-        td_error = dqn_loss.abs() + 1e-3
+        td_error = dqn_loss.abs() + 1e-6
         self.memory.update_priorities(indices, td_error.detach().cpu().numpy())
         dqn_loss = (dqn_loss * weights).mean()
 

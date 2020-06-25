@@ -104,4 +104,3 @@ if __name__ == '__main__':
         player = Play(agent, env, chekpoint["online_model_state_dict"], **params)
         player.evaluate()
         # endregion
-
