@@ -15,8 +15,8 @@ downloads/
 eggs/
 .idea/
 logs/
-vid/
 models/
+vid/
 .eggs/
 lib/
 lib64/

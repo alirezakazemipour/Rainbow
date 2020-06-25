@@ -44,7 +44,7 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, step = args
+        episode, episode_reward, loss, step, beta = args
 
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
 
@@ -76,6 +76,7 @@ class Logger:
                   "Memory_Length:{}| "
                   "Mean_steps_time:{:3.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
+                  "Beta:{:.2f}| "
                   "Time:{}| "
                   "Step:{}".format(episode,
                                    episode_reward,
@@ -88,6 +89,7 @@ class Logger:
                                    self.to_gb(memory.used),
                                    self.to_gb(memory.total),
                                    datetime.datetime.now().strftime("%H:%M:%S"),
+                                   beta,
                                    step
                                    ))
 

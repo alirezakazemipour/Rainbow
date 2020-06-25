@@ -1,7 +1,6 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-import numpy as np
 
 
 def conv2d_size_out(size, kernel_size=5, stride=2):
