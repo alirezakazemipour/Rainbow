@@ -4,6 +4,7 @@ from Brain.model import Model
 from torch.optim.adam import Adam
 import numpy as np
 from Memory.replay_memory import ReplayMemory, Transition
+from collections import deque
 
 
 class Agent:
@@ -18,8 +19,6 @@ class Agent:
         self.decay_rate = self.config["decay_rate"]
         self.min_epsilon = self.config["min_epsilon"]
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
-        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
-
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
             torch.cuda.empty_cache()
@@ -27,6 +26,7 @@ class Agent:
         else:
             self.device = torch.device("cpu")
 
+        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
         self.v_min = self.config["v_min"]
         self.v_max = self.config["v_max"]
         self.n_atoms = self.config["n_atoms"]
@@ -34,6 +34,9 @@ class Agent:
         self.delta_z = (self.v_max - self.v_min) / (self.n_atoms - 1)
         self.offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
             .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
+
+        self.nstep = self.config["n_step"]
+        self.nstep_buffer = deque(maxlen=self.nstep)
 
         self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
@@ -58,6 +61,12 @@ class Agent:
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
         # assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
+        self.nstep_buffer.append((state, action, reward, next_state, done))
+        if len(self.nstep_buffer) < self.nstep:
+            return
+
+        reward, next_state, done = self.get_nstep_returns()
+        state, action, _, _, _ = self.nstep_buffer.pop()
 
         state = from_numpy(state).byte().to("cpu")
         reward = torch.FloatTensor([reward])
@@ -100,7 +109,7 @@ class Agent:
             selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
-            projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones.byte())
+            projected_atoms = rewards + (self.gamma ** self.nstep) * self.support * (1 - dones.byte())
             projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
@@ -141,3 +150,14 @@ class Agent:
 
     def update_epsilon(self, episode):
         self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)
+
+    def get_nstep_returns(self):
+        reward, next_state, done = self.nstep_buffer[-1][-3:]
+
+        for transition in reversed(list(self.nstep_buffer)[:-1]):
+            r, n_s, d = transition[-3:]
+
+            reward = r + self.gamma * reward * (1 - d)
+            next_state, done = (n_s, d) if d else (next_state, done)
+
+        return reward, next_state, done
