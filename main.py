@@ -1,33 +1,38 @@
-from logger import Logger
-from play import Play
-from agent import Agent
-from utils import *
-from config import get_params
+from Common.logger import Logger
+from Common.play import Play
+from Brain.agent import Agent
+from Common.utils import *
+from Common.config import get_params
 import time
 
 
+# region introduction to env.
 def intro_env():
-    test_env.reset()
-    for _ in range(max_steps):
-        a = test_env.env.action_space.sample()
-        _, r, d, info = test_env.step(a)
-        test_env.env.render()
-        time.sleep(0.005)
-        print(f"reward: {r}")
-        print(info)
-        if d:
-            break
+    for e in range(5):
+        test_env.reset()
+        for _ in range(test_env._max_episode_steps):
+            a = test_env.env.action_space.sample()
+            _, r, d, info = test_env.step(a)
+            test_env.env.render()
+            time.sleep(0.005)
+            print(f"reward: {r}")
+            print(info)
+            if d:
+                break
     test_env.close()
     exit(0)
 
 
+# endregion
+
 if __name__ == '__main__':
     params = get_params()
+
     test_env = make_atari(params["env_name"])
-    n_actions = test_env.action_space.n
-    max_steps = int(10e7)  # test_env._max_episode_steps
+    params.update({"n_actions": test_env.action_space.n})
+
     print(f"Environment: {params['env_name']}\n"
-          f"Number of actions:{n_actions}")
+          f"Number of actions:{params['n_actions']}")
 
     if params["do_intro_env"]:
         intro_env()
@@ -35,7 +40,7 @@ if __name__ == '__main__':
     env = make_atari(params["env_name"])
     env.seed(123)
 
-    agent = Agent(n_actions=n_actions, state_shape=[84, 84, 4], **params)
+    agent = Agent(**params)
     logger = Logger(agent, **params)
 
     if not params["train_from_scratch"]:
@@ -53,14 +58,15 @@ if __name__ == '__main__':
     if params["do_train"]:
 
         # for episode in range(min_episode + 1, params["max_episodes"] + 1):
-        stacked_states = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
+        stacked_states = np.zeros(shape=params["state_shape"], dtype=np.uint8)
         state = env.reset()
         stacked_states = stack_states(stacked_states, state, True)
         episode_reward = 0
+        beta = params["beta"]
         loss = 0
         episode = min_episode + 1
         logger.on()
-        for step in range(1, max_steps + 1):
+        for step in range(1, params["max_steps"] + 1):
 
             stacked_states_copy = stacked_states.copy()
             action = agent.choose_action(stacked_states_copy)
@@ -73,7 +79,8 @@ if __name__ == '__main__':
             # env.render()
             # time.sleep(0.005)
             if step % params["train_period"] == 0:
-                loss += agent.train()
+                beta = min(1.0, params["beta"] + step * (1.0 - params["beta"]) / params["final_annealing_beta_steps"])
+                loss += agent.train(beta)
             agent.soft_update_of_target_network()
             # if step % 5000:
             #     agent.hard_update_of_target_network()
@@ -82,7 +89,7 @@ if __name__ == '__main__':
                 logger.off()
                 if params["train_from_scratch"]:
                     agent.update_epsilon(episode)
-                logger.log(episode, episode_reward, loss, step)
+                logger.log(episode, episode_reward, loss, step, beta)
 
                 episode += 1
                 state = env.reset()
@@ -94,8 +101,7 @@ if __name__ == '__main__':
     else:
         # region play
         chekpoint = logger.load_weights()
-        player = Play(agent, env, chekpoint["online_model_state_dict"])
+        player = Play(agent, env, chekpoint["online_model_state_dict"], **params)
         player.evaluate()
         # endregion
 
-# Breakout showed sings of learning after 5000 episodes!!!!
