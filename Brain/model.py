@@ -34,22 +34,6 @@ class Model(nn.Module):
         self.value_fc = NoisyLayer(linear_input_size, 512)
         self.value = NoisyLayer(512, self.n_atoms)
 
-        # self.adv_fc = nn.Linear(linear_input_size, 512)
-        # self.adv = nn.Linear(512, self.n_actions * self.n_atoms)
-        #
-        # self.value_fc = nn.Linear(linear_input_size, 512)
-        # self.value = nn.Linear(512, self.n_atoms)
-        #
-        # nn.init.kaiming_normal_(self.adv_fc.weight, nonlinearity="relu")
-        # self.adv_fc.bias.data.zero_()
-        # nn.init.xavier_uniform_(self.adv.weight)
-        # self.adv.bias.data.zero_()
-        #
-        # nn.init.kaiming_normal_(self.value_fc.weight, nonlinearity="relu")
-        # self.value_fc.bias.data.zero_()
-        # nn.init.xavier_uniform_(self.value.weight)
-        # self.value.bias.data.zero_()
-
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity="relu")

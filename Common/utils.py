@@ -1,5 +1,6 @@
+import numpy as np
 import cv2
-from gym_minigrid.wrappers import *
+import gym
 
 
 def rgb2gray(img):
@@ -25,9 +26,12 @@ def stack_states(stacked_frames, state, is_new_episode):
 
 def make_atari(env_id):
     main_env = gym.make(env_id)
-    assert 'MiniGrid' in main_env.spec.id
-    env = RGBImgPartialObsWrapper(main_env)  # Get pixel observations
-    env = ImgObsWrapper(env)  # Get rid of the 'mission' field
+    assert 'NoFrameskip' in main_env.spec.id
+    env = NoopResetEnv(main_env)
+    env = RepeatActionEnv(env)
+    env = EpisodicLifeEnv(env)
+    if 'FIRE' in main_env.unwrapped.get_action_meanings():
+        env = FireResetEnv(env)
     return env
 
 

@@ -15,9 +15,6 @@ class Agent:
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
         self.tau = self.config["tau"]
-        # self.epsilon = self.config["epsilon"]
-        # self.decay_rate = self.config["decay_rate"]
-        # self.min_epsilon = self.config["min_epsilon"]
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
@@ -45,10 +42,6 @@ class Agent:
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
 
     def choose_action(self, state):
-
-        # if np.random.random() < self.epsilon:
-        #     action = np.random.randint(0, self.n_actions)
-        # else:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).byte().to(self.device)
         with torch.no_grad():
@@ -60,7 +53,7 @@ class Agent:
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
-        # assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
+        assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
         self.nstep_buffer.append((state, action, reward, next_state, done))
         if len(self.nstep_buffer) < self.nstep:
             return
@@ -69,7 +62,7 @@ class Agent:
         state, action, _, _, _ = self.nstep_buffer.pop()
 
         state = from_numpy(state).byte().to("cpu")
-        reward = torch.FloatTensor([reward])
+        reward = torch.CharTensor([reward])
         action = torch.ByteTensor([action]).to('cpu')
         next_state = from_numpy(next_state).byte().to('cpu')
         done = torch.BoolTensor([done])
@@ -118,12 +111,6 @@ class Agent:
             lower_bound[(upper_bound > 0) * (lower_bound == upper_bound)] -= 1
             upper_bound[(lower_bound < (self.n_atoms - 1)) * (lower_bound == upper_bound)] += 1
 
-            # projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
-            # for i in range(self.batch_size):
-            #     for j in range(self.n_atoms):
-            #         projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
-            #         projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
-
             projected_dist = torch.zeros(q_next.size()).to(self.device)
             projected_dist.view(-1).index_add_(0, (lower_bound + self.offset).view(-1),
                                                (q_next * (upper_bound.float() - b)).view(-1))
@@ -148,10 +135,6 @@ class Agent:
     def ready_to_play(self, state_dict):
         self.online_model.load_state_dict(state_dict)
         self.online_model.eval()
-        # self.epsilon = self.min_epsilon
-
-    # def update_epsilon(self, episode):
-    #     self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)
 
     def get_nstep_returns(self):
         reward, next_state, done = self.nstep_buffer[-1][-3:]

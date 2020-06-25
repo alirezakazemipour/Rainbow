@@ -87,8 +87,6 @@ if __name__ == '__main__':
 
             if done:
                 logger.off()
-                # if params["train_from_scratch"]:
-                #     agent.update_epsilon(episode)
                 logger.log(episode, episode_reward, loss, step, beta)
 
                 episode += 1

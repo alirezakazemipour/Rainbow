@@ -103,7 +103,6 @@ class Logger:
     def save_weights(self, episode):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
                     "optimizer_state_dict": self.agent.optimizer.state_dict(),
-                    # "epsilon": self.agent.epsilon,
                     "episode": episode},
                    "Models/" + self.log_dir + "/params.pth")
 
