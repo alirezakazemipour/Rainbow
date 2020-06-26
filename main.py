@@ -57,7 +57,6 @@ if __name__ == '__main__':
 
     if params["do_train"]:
 
-        # for episode in range(min_episode + 1, params["max_episodes"] + 1):
         stacked_states = np.zeros(shape=params["state_shape"], dtype=np.uint8)
         state = env.reset()
         stacked_states = stack_states(stacked_states, state, True)

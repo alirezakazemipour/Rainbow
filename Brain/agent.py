@@ -109,12 +109,6 @@ class Agent:
             lower_bound[(upper_bound > 0) * (lower_bound == upper_bound)] -= 1
             upper_bound[(lower_bound < (self.n_atoms - 1)) * (lower_bound == upper_bound)] += 1
 
-            # projected_dist = torch.zeros((self.batch_size, self.n_atoms)).to(self.device)
-            # for i in range(self.batch_size):
-            #     for j in range(self.n_atoms):
-            #         projected_dist[i, lower_bound[i, j]] += (q_next * (upper_bound - b))[i, j]
-            #         projected_dist[i, upper_bound[i, j]] += (q_next * (b - lower_bound))[i, j]
-
             projected_dist = torch.zeros(q_next.size()).to(self.device)
             projected_dist.view(-1).index_add_(0, (lower_bound + self.offset).view(-1),
                                                (q_next * (upper_bound.float() - b)).view(-1))
@@ -123,7 +117,7 @@ class Agent:
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
         dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1)
-        td_error = dqn_loss.abs() + 1e-3
+        td_error = dqn_loss.abs() + 1e-5
         self.memory.update_priorities(indices, td_error.detach().cpu().numpy())
         dqn_loss = (dqn_loss * weights).mean()
 
