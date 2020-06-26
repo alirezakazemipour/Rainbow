@@ -103,4 +103,5 @@ if __name__ == '__main__':
         player = Play(agent, env, chekpoint["online_model_state_dict"], **params)
         player.evaluate()
         # endregion
+# Pong agent so possibly PER is okay (!) as well as d4qn that had been validated.
 
