@@ -4,6 +4,7 @@ from Brain.model import Model
 from torch.optim.adam import Adam
 import numpy as np
 from Memory.replay_memory import ReplayMemory, Transition
+from collections import deque
 
 
 class Agent:
@@ -35,6 +36,9 @@ class Agent:
         self.offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
             .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
 
+        self.n_step = self.config["n_step"]
+        self.n_step_buffer = deque(maxlen=self.n_step)
+
         self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.hard_update_of_target_network()
@@ -58,6 +62,12 @@ class Agent:
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
         assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
+        self.n_step_buffer.append((state, action, reward, next_state, done))
+        if len(self.n_step_buffer) < self.n_step:
+            return
+
+        reward, next_state, done = self.get_n_step_returns()
+        state, action, _, _, _ = self.n_step_buffer.pop()
 
         state = from_numpy(state).byte().to("cpu")
         reward = torch.CharTensor([reward])
@@ -100,7 +110,7 @@ class Agent:
             selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
-            projected_atoms = rewards + self.config["gamma"] * self.support * (1 - dones.byte())
+            projected_atoms = rewards + (self.gamma ** self.n_step) * self.support * (1 - dones.byte())
             projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
@@ -135,3 +145,14 @@ class Agent:
 
     def update_epsilon(self, episode):
         self.epsilon = self.min_epsilon + (1 - self.min_epsilon) * np.exp(-episode * self.decay_rate)
+
+    def get_n_step_returns(self):
+        reward, next_state, done = self.n_step_buffer[-1][-3:]
+
+        for transition in reversed(list(self.n_step_buffer)[:-1]):
+            r, n_s, d = transition[-3:]
+
+            reward = r + self.gamma * reward * (1 - d)
+            next_state, done = (n_s, d) if d else (next_state, done)
+
+        return reward, next_state, done
