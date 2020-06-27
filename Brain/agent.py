@@ -70,7 +70,7 @@ class Agent:
         state, action, _, _, _ = self.n_step_buffer.pop()
 
         state = from_numpy(state).byte().to("cpu")
-        reward = torch.CharTensor([reward])
+        reward = torch.Tensor([reward])
         action = torch.ByteTensor([action]).to('cpu')
         next_state = from_numpy(next_state).byte().to('cpu')
         done = torch.BoolTensor([done])
