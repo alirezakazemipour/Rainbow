@@ -25,13 +25,12 @@ class ReplayMemory:
         self.memory.append(Transition(*item))
         self.sum_tree[self.tree_ptr] = self.max_priority ** self.alpha
         self.min_tree[self.tree_ptr] = self.max_priority ** self.alpha
-        self.tree_ptr = self.tree_ptr + 1 if self.tree_ptr + 1 <= self.capacity else self.capacity
+        self.tree_ptr += 1
         if len(self.memory) > self.capacity:
             self.memory.pop(0)
-            self.sum_tree.tree.pop(self.capacity)
-            self.sum_tree.tree.append(0)
-            self.min_tree.tree.pop(self.capacity)
-            self.min_tree.tree.append(np.inf)
+            self.tree_ptr -= 1
+            self.sum_tree.remove_last_elem()
+            self.min_tree.remove_last_elem()
         assert len(self.memory) <= self.capacity
 
     def sample(self, batch_size, beta):
@@ -52,7 +51,7 @@ class ReplayMemory:
             weights.append((len(self) * sample_prob) ** -beta)
         weights = np.asarray(weights) / max_weight
 
-        return [self.memory[i] for i in indices], weights, np.asarray(indices)
+        return [self.memory[index] for index in indices], weights, np.asarray(indices)
 
     def update_priorities(self, indices, priors):
         assert len(indices) == len(priors)

@@ -41,6 +41,10 @@ class MinSegmentTree:
         idx += self.capacity
         return self.tree[idx]
 
+    def remove_last_elem(self):
+        self.tree.pop(self.capacity - 1)
+        self.tree.insert(2 * self.capacity - 1, np.inf)
+
 
 class SumSegmentTree:
     def __init__(self, capacity):
@@ -94,3 +98,7 @@ class SumSegmentTree:
         assert 0 <= idx < self.capacity
         idx += self.capacity
         return self.tree[idx]
+
+    def remove_last_elem(self):
+        self.tree.pop(self.capacity - 1)
+        self.tree.insert(2 * self.capacity - 1, 0)
