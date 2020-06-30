@@ -72,12 +72,12 @@ class Logger:
 
             print("EP:{}| "
                   "EP_Reward:{:.2f}| "
-                  "EP_Running_Reward:{:3.3f}| "
-                  "Running_loss:{:3.3f}| "
+                  "EP_Running_Reward:{:.3f}| "
+                  "Running_loss:{:.3f}| "
                   "EP_Duration:{:3.3f}| "
                   "Epsilon:{:.3f}| "
                   "Memory_Length:{}| "
-                  "Mean_steps_time:{:3.3f}| "
+                  "Mean_steps_time:{:.3f}| "
                   "{:.1f}/{:.1f} GB RAM| "
                   "Beta:{:.2f}| "
                   "Time:{}| "
@@ -109,7 +109,8 @@ class Logger:
                     "episode": episode},
                    "Models/" + self.log_dir + "/params.pth")
 
-    def load_weights(self):
+    @staticmethod
+    def load_weights():
         model_dir = glob.glob("Models/*")
         model_dir.sort()
         checkpoint = torch.load(model_dir[-1] + "/params.pth")

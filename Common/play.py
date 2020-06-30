@@ -1,6 +1,7 @@
 from Common.utils import *
 import os
 
+
 class Play:
     def __init__(self, agent, env, weights, **config):
         self.config = config
@@ -11,10 +12,11 @@ class Play:
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
         if not os.path.exists("Results"):
             os.mkdir("Results")
-        self.VideoWriter = cv2.VideoWriter("Results/" + self.config["algo"] + ".avi", self.fourcc, 50.0, (160, 210))
+        self.VideoWriter = cv2.VideoWriter("Results/" + self.config["algo"] + ".avi", self.fourcc, 50.0,
+                                           self.env.observation_space.shape[:-1])
 
     def evaluate(self):
-        stacked_states = np.zeros(shape=[84, 84, 4], dtype=np.uint8)
+        stacked_states = np.zeros(shape=self.config["state_shape"], dtype=np.uint8)
         total_reward = 0
         print("--------Play mode--------")
         for _ in range(1):

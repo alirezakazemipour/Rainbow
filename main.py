@@ -38,7 +38,7 @@ if __name__ == '__main__':
         intro_env()
 
     env = make_atari(params["env_name"])
-    env.seed(123)
+    # env.seed(123)
 
     agent = Agent(**params)
     logger = Logger(agent, **params)
