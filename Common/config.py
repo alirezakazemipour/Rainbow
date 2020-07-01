@@ -4,8 +4,9 @@ import argparse
 def get_params():
     parser = argparse.ArgumentParser(
         description="Variable parameters based on the configuration of the machine or user's choice")
-    parser.add_argument("--algo", default="rainbow", type=str, help="The algorithm which is used to train the agent.")
-    parser.add_argument("--mem_size", default=35000, type=int, help="The memory size.")
+    parser.add_argument("--algo", default="rainbow", type=str,
+                        help="The algorithm which is used to train the agent.")
+    parser.add_argument("--mem_size", default=55000, type=int, help="The memory size.")
     parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment.")
     parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
@@ -36,6 +37,7 @@ def get_params():
                       "adam_eps": 1.5e-4,
                       "alpha": 0.5,
                       "beta": 0.4,
+                      "clip_grad_norm": 10.0,
                       "final_annealing_beta_steps": int(1e+6),
                       "initial_mem_size_to_train": 1000
                       }

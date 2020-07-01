@@ -32,8 +32,8 @@ class Agent:
         self.offset = torch.linspace(0, (self.batch_size - 1) * self.n_atoms, self.batch_size).long() \
             .unsqueeze(1).expand(self.batch_size, self.n_atoms).to(self.device)
 
-        self.nstep = self.config["n_step"]
-        self.nstep_buffer = deque(maxlen=self.nstep)
+        self.n_step = self.config["n_step"]
+        self.n_step_buffer = deque(maxlen=self.n_step)
 
         self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
@@ -54,15 +54,16 @@ class Agent:
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
         assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
-        self.nstep_buffer.append((state, action, reward, next_state, done))
-        if len(self.nstep_buffer) < self.nstep:
+
+        self.n_step_buffer.append((state, action, reward, next_state, done))
+        if len(self.n_step_buffer) < self.n_step:
             return
 
-        reward, next_state, done = self.get_nstep_returns()
-        state, action, _, _, _ = self.nstep_buffer.pop()
+        reward, next_state, done = self.get_n_step_returns()
+        state, action, _, _, _ = self.n_step_buffer.pop()
 
         state = from_numpy(state).byte().to("cpu")
-        reward = torch.CharTensor([reward])
+        reward = torch.Tensor([reward])
         action = torch.ByteTensor([action]).to('cpu')
         next_state = from_numpy(next_state).byte().to('cpu')
         done = torch.BoolTensor([done])
@@ -102,7 +103,7 @@ class Agent:
             selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
-            projected_atoms = rewards + (self.gamma ** self.nstep) * self.support * (1 - dones.byte())
+            projected_atoms = rewards + (self.gamma ** self.n_step) * self.support * (1 - dones.byte())
             projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
@@ -125,7 +126,7 @@ class Agent:
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), 10.0)
+        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
         self.optimizer.step()
 
         self.online_model.reset()
@@ -136,10 +137,11 @@ class Agent:
         self.online_model.load_state_dict(state_dict)
         self.online_model.eval()
 
-    def get_nstep_returns(self):
-        reward, next_state, done = self.nstep_buffer[-1][-3:]
+    def get_n_step_returns(self):
+        reward, next_state, done = self.n_step_buffer[-1][-3:]
 
-        for transition in reversed(list(self.nstep_buffer)[:-1]):
+        for transition in reversed(list(self.n_step_buffer)[:-1]):
+
             r, n_s, d = transition[-3:]
 
             reward = r + self.gamma * reward * (1 - d)

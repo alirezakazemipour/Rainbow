@@ -38,7 +38,7 @@ if __name__ == '__main__':
         intro_env()
 
     env = make_atari(params["env_name"])
-    env.seed(123)
+    # env.seed(123)
 
     agent = Agent(**params)
     logger = Logger(agent, **params)
@@ -57,7 +57,6 @@ if __name__ == '__main__':
 
     if params["do_train"]:
 
-        # for episode in range(min_episode + 1, params["max_episodes"] + 1):
         stacked_states = np.zeros(shape=params["state_shape"], dtype=np.uint8)
         state = env.reset()
         stacked_states = stack_states(stacked_states, state, True)
@@ -102,3 +101,4 @@ if __name__ == '__main__':
         player = Play(agent, env, chekpoint["online_model_state_dict"], **params)
         player.evaluate()
         # endregion
+# Pong agent so possibly PER is okay (!) as well as d4qn that had been validated.

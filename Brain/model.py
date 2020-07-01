@@ -48,9 +48,9 @@ class Model(nn.Module):
         x = x.view(x.size(0), -1)
 
         adv_fc = F.relu(self.adv_fc(x))
-        adv = self.adv(adv_fc.T).T.view(-1, self.n_actions, self.n_atoms)
+        adv = self.adv(adv_fc).view(-1, self.n_actions, self.n_atoms)
         value_fc = F.relu(self.value_fc(x))
-        value = self.value(value_fc.T).T.view(-1, 1, self.n_atoms)
+        value = self.value(value_fc).view(-1, 1, self.n_atoms)
 
         mass_probs = value + adv - adv.mean(1, keepdim=True)
         return F.softmax(mass_probs, dim=-1).clamp(min=1e-3)
@@ -75,28 +75,34 @@ class NoisyLayer(nn.Module):
 
         self.mu_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_inputs))
         self.sigma_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_inputs))
+        self.register_buffer('weight_epsilon', torch.FloatTensor(self.n_outputs, self.n_inputs))
 
-        self.mu_b = nn.Parameter(torch.FloatTensor(self.n_outputs, 1))
-        self.sigma_b = nn.Parameter(torch.FloatTensor(self.n_outputs, 1))
+        self.mu_b = nn.Parameter(torch.FloatTensor(self.n_outputs))
+        self.sigma_b = nn.Parameter(torch.FloatTensor(self.n_outputs))
+        self.register_buffer('bias_epsilon', torch.FloatTensor(self.n_outputs))
 
         self.mu_w.data.uniform_(-1 / np.sqrt(self.n_inputs), 1 / np.sqrt(self.n_inputs))
         self.sigma_w.data.fill_(0.5 / np.sqrt(self.n_inputs))
 
         self.mu_b.data.uniform_(-1 / np.sqrt(self.n_inputs), 1 / np.sqrt(self.n_inputs))
-        self.sigma_b.data.fill_(0.5 / np.sqrt(self.n_inputs))
+        self.sigma_b.data.fill_(0.5 / np.sqrt(self.n_outputs))
 
+        self.epsilon_i = 0
+        self.epsilon_j = 0
         self.reset_noise()
 
     def forward(self, inputs):
         x = inputs
-        weights = self.mu_w + self.sigma_w.mul(self.epsilon_j.mm(self.epsilon_i.T))
-        biases = self.mu_b + self.sigma_b.mul(self.epsilon_j)
-        x = x.mm(weights.T).T + biases
+        weights = self.mu_w + self.sigma_w * self.weight_epsilon
+        biases = self.mu_b + self.sigma_b * self.bias_epsilon
+        x = F.linear(x, weights, biases)
         return x
 
     def f(self, x):
         return torch.sign(x) * torch.sqrt(torch.abs(x))
 
     def reset_noise(self):
-        self.epsilon_i = self.f(torch.randn(self.n_inputs)).view(-1, 1).cuda()
-        self.epsilon_j = self.f(torch.randn(self.n_outputs)).view(-1, 1).cuda()
+        self.epsilon_i = self.f(torch.randn(self.n_inputs))
+        self.epsilon_j = self.f(torch.randn(self.n_outputs))
+        self.weight_epsilon.copy_(self.epsilon_j.ger(self.epsilon_i))
+        self.bias_epsilon.copy_(self.epsilon_j)

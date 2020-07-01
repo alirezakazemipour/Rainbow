@@ -1,7 +1,7 @@
 import random
-from collections import namedtuple
 from Memory.segment_tree import MinSegmentTree, SumSegmentTree
 import numpy as np
+from collections import namedtuple
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'reward', 'next_state', 'done'))
@@ -22,22 +22,20 @@ class ReplayMemory:
         self.tree_ptr = 0
 
     def add(self, *item):
-        self.memory.append(Transition(*item))
+        if len(self.memory) == self.capacity:
+            self.memory.pop(self.tree_ptr)
+
+        self.memory.insert(self.tree_ptr, item)
         self.sum_tree[self.tree_ptr] = self.max_priority ** self.alpha
         self.min_tree[self.tree_ptr] = self.max_priority ** self.alpha
-        self.tree_ptr = self.tree_ptr + 1 if self.tree_ptr + 1 <= self.capacity else self.capacity
-        if len(self.memory) > self.capacity:
-            self.memory.pop(0)
-            self.sum_tree.tree.pop(self.capacity)
-            self.sum_tree.tree.append(0)
-            self.min_tree.tree.pop(self.capacity)
-            self.min_tree.tree.append(np.inf)
+        self.tree_ptr = (self.tree_ptr + 1) % self.capacity
+
         assert len(self.memory) <= self.capacity
 
     def sample(self, batch_size, beta):
         indices = []
         weights = []
-        p_total = self.sum_tree.sum(0, len(self) - 1)
+        p_total = self.sum_tree.sum(0, len(self))  # TODO: this line changed.
         p_min = self.min_tree.min() / p_total
         max_weight = (p_min * len(self)) ** (-beta)
         segment = p_total / batch_size
@@ -52,7 +50,7 @@ class ReplayMemory:
             weights.append((len(self) * sample_prob) ** -beta)
         weights = np.asarray(weights) / max_weight
 
-        return [self.memory[i] for i in indices], weights, np.asarray(indices)
+        return [self.memory[index] for index in indices], weights, np.asarray(indices)
 
     def update_priorities(self, indices, priors):
         assert len(indices) == len(priors)
