@@ -24,7 +24,7 @@ class Logger:
         self.last_10_ep_rewards = deque(maxlen=10)
 
         self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
-        if self.config["do_train"]:
+        if self.config["do_train"] and self.config["train_from_scratch"]:
             self.create_wights_folder(self.log_dir)
             self.log_params()
 
@@ -67,8 +67,8 @@ class Logger:
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.98 * self.to_gb(memory.total)
 
-        if episode % self.config["interval"] == 0:
-            self.save_weights(episode)
+        if episode % (self.config["interval"] / 3) == 0:
+            self.save_weights(episode, beta)
 
             print("EP:{}| "
                   "EP_Reward:{:.2f}| "
@@ -100,10 +100,11 @@ class Logger:
             writer.add_scalar("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
             writer.add_scalar("Loss", loss, episode)
 
-    def save_weights(self, episode):
+    def save_weights(self, episode, beta):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
                     "optimizer_state_dict": self.agent.optimizer.state_dict(),
-                    "episode": episode},
+                    "episode": episode,
+                    "beta": beta},
                    "Models/" + self.log_dir + "/params.pth")
 
     @staticmethod

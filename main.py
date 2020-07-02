@@ -47,7 +47,7 @@ if __name__ == '__main__':
         chekpoint = logger.load_weights()
         agent.online_model.load_state_dict(chekpoint["online_model_state_dict"])
         agent.hard_update_of_target_network()
-        # agent.epsilon = chekpoint["epsilon"]
+        params.update({"beta": chekpoint["beta"]})
         min_episode = chekpoint["episode"]
 
         print("Keep training from previous run.")
