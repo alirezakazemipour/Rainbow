@@ -13,7 +13,7 @@ class Play:
         if not os.path.exists("Results"):
             os.mkdir("Results")
         self.VideoWriter = cv2.VideoWriter("Results/" + self.config["algo"] + ".avi", self.fourcc, 50.0,
-                                           self.env.observation_space.shape[:-1])
+                                           self.env.observation_space.shape[1::-1])
 
     def evaluate(self):
         stacked_states = np.zeros(shape=self.config["state_shape"], dtype=np.uint8)

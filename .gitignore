@@ -16,7 +16,6 @@ eggs/
 .idea/
 Logs/
 Models/
-Results/
 vid/
 .eggs/
 lib/
