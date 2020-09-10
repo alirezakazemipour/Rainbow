@@ -67,7 +67,7 @@ class Logger:
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.98 * self.to_gb(memory.total)
 
-        if episode % (self.config["interval"] / 3) == 0:
+        if episode % (self.config["interval"] // 3) == 0:
             self.save_weights(episode, beta)
 
             print("EP:{}| "
