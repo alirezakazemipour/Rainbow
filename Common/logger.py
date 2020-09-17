@@ -69,7 +69,8 @@ class Logger:
 
         if episode % (self.config["interval"] // 3) == 0:
             self.save_weights(episode, beta)
-
+            
+        if episode % self.config["interval"] == 0:
             print("EP:{}| "
                   "EP_Reward:{:.2f}| "
                   "EP_Running_Reward:{:.3f}| "
