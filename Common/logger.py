@@ -67,7 +67,7 @@ class Logger:
         memory = psutil.virtual_memory()
         assert self.to_gb(memory.used) < 0.98 * self.to_gb(memory.total)
 
-        if episode % (self.config["interval"] / 3) == 0:
+        if episode % (self.config["interval"] // 3) == 0:
             self.save_weights(episode, beta)
 
             print("EP:{}| "
@@ -107,9 +107,9 @@ class Logger:
                     "beta": beta},
                    "Models/" + self.log_dir + "/params.pth")
 
-    @staticmethod
-    def load_weights():
+    def load_weights(self):
         model_dir = glob.glob("Models/*")
         model_dir.sort()
         checkpoint = torch.load(model_dir[-1] + "/params.pth")
+        self.log_dir = model_dir[-1].split(os.sep)[-1]
         return checkpoint

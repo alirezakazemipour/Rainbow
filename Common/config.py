@@ -11,9 +11,9 @@ def get_params():
     parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes.")
-    parser.add_argument("--do_train", action="store_true",
+    parser.add_argument("--do_train", action="store_false",
                         help="The flag determines whether to train the agent or play with it.")
-    parser.add_argument("--train_from_scratch", action="store_false",
+    parser.add_argument("--train_from_scratch", action="store_true",
                         help="The flag determines whether to train from scratch or continue previous tries.")
 
     parser.add_argument("--do_intro_env", action="store_true",
@@ -27,7 +27,7 @@ def get_params():
                       "n_step": 3,
                       "batch_size": 32,
                       "state_shape": (84, 84, 4),
-                      "max_steps": int(10e7),
+                      "max_steps": int(1e+8),
                       "gamma": 0.99,
                       "tau": 0.001,
                       "train_period": 4,
