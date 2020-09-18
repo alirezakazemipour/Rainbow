@@ -113,7 +113,7 @@ python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v
 ```shell
 python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 --do_train --train_from_scratch
 ```
-### Hardware requirments
+### Hardware requirements
 - **The whole training procedure was done on Google Colab and it took less than 15 hours of training, thus a machine with similar configuration would be sufficient, but if you need a more powerful free online GPU provider, take a look at [paperspace.com](paperspace.com)**.
 ## References
 1. [_Human-level control through deep reinforcement learning_, Mnih et al., 2015](https://www.nature.com/articles/nature14236)
@@ -124,3 +124,10 @@ python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v
 6. [_Noisy Networks for Exploration_, Fortunato et al., 2017](https://arxiv.org/abs/1706.10295)
 7. [_Rainbow: Combining Improvements in Deep Reinforcement Learning_, Hessel et al., 2017](https://arxiv.org/abs/1710.02298)
 ## Acknowledgement 
+1. [@Curt-Park](https://github.com/Curt-Park) for [rainbow is all you need](https://github.com/Curt-Park/rainbow-is-all-you-need).
+2. [@higgsfield](https://github.com/higgsfield) for [RL-Adventure](https://github.com/higgsfield/RL-Adventure).
+3. [@wenh123](https://github.com/wenh123) for [NoisyNet-DQN](https://github.com/wenh123/NoisyNet-DQN).
+4. [@qfettes](https://github.com/qfettes) for [DeepRL-Tutorials](https://github.com/qfettes/DeepRL-Tutorials).
+5. [@AdrianHsu](https://github.com/AdrianHsu) for [breakout-Deep-Q-Network](https://github.com/AdrianHsu/breakout-Deep-Q-Network).
+6. [@Kaixhin](https://github.com/Kaixhin) for [Rainbow](https://github.com/Kaixhin/Rainbow).
+7. [@Kchu](https://github.com/Kchu) for [DeepRL_PyTorch](https://github.com/Kchu/DeepRL_PyTorch).
