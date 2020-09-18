@@ -13,6 +13,7 @@ Rainbow combined all these methods also with multi-step learning, and showed the
 <p align="center">
   <img src="Results/rainbow.gif" height=250>
 </p>
+
 ## Results
 > x-axis: episode number.
 
