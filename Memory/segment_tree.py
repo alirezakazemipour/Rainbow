@@ -5,7 +5,7 @@ class MinSegmentTree:
     def __init__(self, capacity):
         assert capacity > 0 and capacity & (capacity - 1) == 0  # Full binary tree
         self.capacity = capacity
-        self.tree = list(np.full(2 * self.capacity - 1, np.inf))
+        self.tree = list(np.full(2 * self.capacity, np.inf))
 
     def query(self, start_idx, end_idx, current_node, first_node, last_node):
         if start_idx == first_node and end_idx == last_node:  # If we're on the node that contains what we want.
@@ -46,7 +46,7 @@ class SumSegmentTree:
     def __init__(self, capacity):
         assert capacity > 0 and capacity & (capacity - 1) == 0  # Full binary tree
         self.capacity = capacity
-        self.tree = list(np.full(2 * self.capacity - 1, 0))
+        self.tree = list(np.full(2 * self.capacity, 0))
 
     def query(self, start_idx, end_idx, current_node, first_node, last_node):
         if start_idx == first_node and end_idx == last_node:  # If we're on the node that contains what we want.
