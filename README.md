@@ -106,16 +106,16 @@ optional arguments:
                         continue previous tries.
   --do_intro_env        Only introduce the environment then close the program.
 ```
-- **In order to train the agent with default arguments , execute the following command and use `--do_train` flag, otherwise the agent would be tested** (You may change the memory capacity and the environment based on your desire.):
+- **In order to train the agent with default arguments , execute the following command and use `--do_train` flag to test the agent** (You may change the memory capacity and the environment based on your desire.):
 ```shell
-python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 --do_train
+python3 main.py --algo="rainbow" --mem_size=150000 --env_name="BreakoutNoFrameskip-v4" --interval=100 --train_from_scratch
 ```
 - **If you want to keep training your previous run, execute the follwoing:**
 ```shell
-python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 --do_train --train_from_scratch
+python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 
 ```
 ### Hardware requirements
-- **The whole training procedure was done on Google Colab and it took less than 15 hours of training, thus a machine with similar configuration would be sufficient, but if you need a more powerful free online GPU provider, take a look at [paperspace.com](paperspace.com)**.
+- **The whole training procedure was done on Google Colab and it took less than 15 hours of training, thus a machine with a similar configuration would be sufficient, but if you need a more powerful free online GPU provider, take a look at [paperspace.com](paperspace.com)**.
 ## References
 1. [_Human-level control through deep reinforcement learning_, Mnih et al., 2015](https://www.nature.com/articles/nature14236)
 2. [_Deep Reinforcement Learning with Double Q-learning_, Van Hasselt et al., 2015](https://arxiv.org/abs/1509.06461)
