@@ -1,7 +1,6 @@
 import time
 import numpy as np
 import psutil
-from torch.utils.tensorboard import SummaryWriter
 import torch
 import os
 import datetime
@@ -13,6 +12,7 @@ class Logger:
     def __init__(self, agent, **config):
         self.config = config
         self.agent = agent
+        self.experiment = self.config["experiment"]
         self.log_dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.start_time = 0
         self.duration = 0
@@ -26,7 +26,8 @@ class Logger:
         self.to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
         if self.config["do_train"] and self.config["train_from_scratch"]:
             self.create_wights_folder(self.log_dir)
-            self.log_params()
+            self.experiment.log_parameters(self.config)
+            # self.log_params()
 
     @staticmethod
     def create_wights_folder(dir):
@@ -34,10 +35,10 @@ class Logger:
             os.mkdir("Models")
         os.mkdir("Models/" + dir)
 
-    def log_params(self):
-        with SummaryWriter("Logs/" + self.log_dir) as writer:
-            for k, v in self.config.items():
-                writer.add_text(k, str(v))
+    # def log_params(self):
+    #     with SummaryWriter("Logs/" + self.log_dir) as writer:
+    #         for k, v in self.config.items():
+    #             writer.add_text(k, str(v))
 
     def on(self):
         self.start_time = time.time()
@@ -95,11 +96,11 @@ class Logger:
                                    step
                                    ))
 
-        with SummaryWriter("Logs/" + self.log_dir) as writer:
-            writer.add_scalar("Episode running reward", self.running_reward, episode)
-            writer.add_scalar("Max episode reward", self.max_episode_reward, episode)
-            writer.add_scalar("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
-            writer.add_scalar("Loss", loss, episode)
+        # with SummaryWriter("Logs/" + self.log_dir) as writer:
+        self.experiment.log_metric("Episode running reward", self.running_reward, episode)
+        self.experiment.log_metric("Max episode reward", self.max_episode_reward, episode)
+        self.experiment.log_metric("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
+        self.experiment.log_metric("Loss", loss, episode)
 
     def save_weights(self, episode, beta):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),

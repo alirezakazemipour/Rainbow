@@ -7,11 +7,11 @@ def get_params():
     parser.add_argument("--algo", default="rainbow", type=str,
                         help="The algorithm which is used to train the agent.")
     parser.add_argument("--mem_size", default=55000, type=int, help="The memory size.")
-    parser.add_argument("--env_name", default="PongNoFrameskip-v4", type=str, help="Name of the environment.")
+    parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment.")
     parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by episodes.")
-    parser.add_argument("--do_train", action="store_false",
+    parser.add_argument("--do_train", action="store_true",
                         help="The flag determines whether to train the agent or play with it.")
     parser.add_argument("--train_from_scratch", action="store_true",
                         help="The flag determines whether to train from scratch or continue previous tries.")
@@ -26,10 +26,9 @@ def get_params():
     default_params = {"lr": 6.25e-5,
                       "n_step": 3,
                       "batch_size": 32,
-                      "state_shape": (84, 84, 4),
+                      "state_shape": (4, 84, 84),
                       "max_steps": int(1e+8),
                       "gamma": 0.99,
-                      "tau": 0.001,
                       "train_period": 4,
                       "v_min": -10,
                       "v_max": 10,
@@ -39,7 +38,9 @@ def get_params():
                       "beta": 0.4,
                       "clip_grad_norm": 10.0,
                       "final_annealing_beta_steps": int(1e+6),
-                      "initial_mem_size_to_train": 1000
+                      "initial_mem_size_to_train": 1000,
+                      "seed": 123,
+                      "tau": 1.25e-4
                       }
     # endregion
     total_params = {**vars(parser_params), **default_params}

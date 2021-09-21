@@ -13,10 +13,6 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-.idea/
-Logs/
-Models/
-vid/
 .eggs/
 lib/
 lib64/
@@ -117,3 +113,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
+Logs/
+Models/
+vid/
+.comet.config

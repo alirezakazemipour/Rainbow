@@ -1,9 +1,9 @@
 from torch import from_numpy
 import torch
-from Brain.model import Model
+from .model import Model
 from torch.optim.adam import Adam
 import numpy as np
-from Memory.replay_memory import ReplayMemory, Transition
+from Memory import ReplayMemory
 from collections import deque
 
 
@@ -16,14 +16,19 @@ class Agent:
         self.gamma = self.config["gamma"]
         self.tau = self.config["tau"]
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
+        torch.manual_seed(self.config["seed"])
+
         if torch.cuda.is_available():
             torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
             torch.cuda.empty_cache()
+            torch.cuda.manual_seed(self.config["seed"])
+            torch.cuda.manual_seed_all(self.config["seed"])
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
 
-        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"])
+        self.memory = ReplayMemory(self.config["mem_size"], self.config["alpha"], self.config["seed"])
         self.v_min = self.config["v_min"]
         self.v_max = self.config["v_max"]
         self.n_atoms = self.config["n_atoms"]
@@ -45,31 +50,26 @@ class Agent:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).byte().to(self.device)
         with torch.no_grad():
-            action = self.online_model.get_q_value(state.permute(dims=[0, 3, 1, 2])).argmax(-1).item()
-
-        return action
+            action = self.online_model.get_q_value(state).argmax(-1)
+        return action.item()
 
     def store(self, state, action, reward, next_state, done):
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
-        assert reward % 1 == 0, "Reward isn't an integer number so change the type it's stored in the replay memory."
+        assert (reward, int)
+        assert isinstance(done, bool)
 
-        self.n_step_buffer.append((state, action, reward, next_state, done))
+        self.n_step_buffer.append((state, np.uint8(action), np.int8(reward), next_state, done))
         if len(self.n_step_buffer) < self.n_step:
             return
 
         reward, next_state, done = self.get_n_step_returns()
         state, action, _, _, _ = self.n_step_buffer.pop()
 
-        state = from_numpy(state).byte().to("cpu")
-        reward = torch.Tensor([reward])
-        action = torch.ByteTensor([action]).to('cpu')
-        next_state = from_numpy(next_state).byte().to('cpu')
-        done = torch.BoolTensor([done])
         self.memory.add(state, action, reward, next_state, done)
 
-    def soft_update_of_target_network(self, tau=0.001):
+    def soft_update_of_target_network(self, tau):
         for target_param, local_param in zip(self.target_model.parameters(), self.online_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
         self.target_model.eval()
@@ -79,16 +79,13 @@ class Agent:
         self.target_model.eval()
 
     def unpack_batch(self, batch):
-        batch = Transition(*zip(*batch))
+        batch = self.config["transition"](*zip(*batch))
 
-        states = torch.cat(batch.state).to(self.device).view(self.config["batch_size"], *self.state_shape)
-        actions = torch.cat(batch.action).to(self.device)
-        rewards = torch.cat(batch.reward).to(self.device).view((-1, 1))
-        next_states = torch.cat(batch.next_state).to(self.device).view(self.config["batch_size"], *self.state_shape)
-        dones = torch.cat(batch.done).to(self.device).view((-1, 1))
-        states = states.permute(dims=[0, 3, 1, 2])
-        actions = actions.view((-1, 1))
-        next_states = next_states.permute(dims=[0, 3, 1, 2])
+        states = from_numpy(np.stack(batch.state)).to(self.device)
+        actions = from_numpy(np.stack(batch.action)).to(self.device).view((-1, 1))
+        rewards = from_numpy(np.stack(batch.reward)).to(self.device).view((-1, 1))
+        next_states = from_numpy(np.stack(batch.next_state)).to(self.device)
+        dones = from_numpy(np.stack(batch.done)).to(self.device).view((-1, 1))
         return states, actions, rewards, next_states, dones
 
     def train(self, beta):

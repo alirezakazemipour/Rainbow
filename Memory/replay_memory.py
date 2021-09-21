@@ -1,18 +1,15 @@
 import random
 from Memory.segment_tree import MinSegmentTree, SumSegmentTree
 import numpy as np
-from collections import namedtuple
-
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'reward', 'next_state', 'done'))
 
 
 class ReplayMemory:
-    def __init__(self, capacity, alpha):
+    def __init__(self, capacity, alpha, seed):
         self.capacity = capacity
         self.max_priority = 1
         self.alpha = alpha
         self.memory = []
+        random.seed(seed)
 
         n_nodes = 1
         while n_nodes < self.capacity:

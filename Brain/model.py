@@ -1,3 +1,4 @@
+from abc import ABC
 from torch import nn
 import torch
 import torch.nn.functional as F
@@ -11,7 +12,7 @@ def conv2d_size_out(size, kernel_size=5, stride=2):
 class Model(nn.Module):
     def __init__(self, state_shape, n_actions, n_atoms, support):
         super(Model, self).__init__()
-        width, height, channel = state_shape
+        channel, width, height = state_shape
         self.n_actions = n_actions
         self.state_shape = state_shape
         self.n_atoms = n_atoms
@@ -36,11 +37,11 @@ class Model(nn.Module):
 
         for m in self.modules():
             if isinstance(m, torch.nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+                nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
                 m.bias.data.zero_()
 
     def forward(self, inputs):
-        x = inputs / 255.0
+        x = inputs / 255.
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
@@ -67,7 +68,7 @@ class Model(nn.Module):
         self.value.reset_noise()
 
 
-class NoisyLayer(nn.Module):
+class NoisyLayer(nn.Module, ABC):
     def __init__(self, n_inputs, n_outputs):
         super(NoisyLayer, self).__init__()
         self.n_inputs = n_inputs

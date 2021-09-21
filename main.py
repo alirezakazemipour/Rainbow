@@ -1,9 +1,11 @@
-from Common.logger import Logger
-from Common.play import Play
-from Brain.agent import Agent
-from Common.utils import *
-from Common.config import get_params
+from comet_ml import Experiment
+from Common import Logger, Play, get_params, make_atari, make_state
+from Brain import Agent
+from collections import namedtuple
 import time
+import numpy as np
+import os
+import math
 
 
 # region introduction to env.
@@ -27,9 +29,12 @@ def intro_env():
 
 if __name__ == '__main__':
     params = get_params()
+    os.environ["PYTHONHASHSEED"] = str(params["seed"])
 
-    test_env = make_atari(params["env_name"])
+    test_env = make_atari(params["env_name"], params["seed"])
     params.update({"n_actions": test_env.action_space.n})
+    del test_env
+    params.update({"transition": namedtuple('transition', ('state', 'action', 'reward', 'next_state', 'done'))})
 
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{params['n_actions']}")
@@ -37,11 +42,11 @@ if __name__ == '__main__':
     if params["do_intro_env"]:
         intro_env()
 
-    env = make_atari(params["env_name"])
-    env.seed(int(time.time()))
+    env = make_atari(params["env_name"], params["seed"])
 
     agent = Agent(**params)
-    logger = Logger(agent, **params)
+    experiment = Experiment()
+    logger = Logger(agent, experiment=experiment, **params)
 
     if not params["train_from_scratch"]:
         chekpoint = logger.load_weights()
@@ -57,9 +62,10 @@ if __name__ == '__main__':
 
     if params["do_train"]:
 
-        stacked_states = np.zeros(shape=params["state_shape"], dtype=np.uint8)
-        state = env.reset()
-        stacked_states = stack_states(stacked_states, state, True)
+        sign = lambda x: bool(x > 0) - bool(x < 0)
+        state = np.zeros(shape=params["state_shape"], dtype=np.uint8)
+        obs = env.reset()
+        state = make_state(state, obs, True)
         episode_reward = 0
         beta = params["beta"]
         loss = 0
@@ -67,30 +73,26 @@ if __name__ == '__main__':
         logger.on()
         for step in range(1, params["max_steps"] + 1):
 
-            stacked_states_copy = stacked_states.copy()
-            action = agent.choose_action(stacked_states_copy)
-            next_state, reward, done, _ = env.step(action)
-            stacked_states = stack_states(stacked_states, next_state, False)
-            reward = np.clip(reward, -1.0, 1.0)
-            agent.store(stacked_states_copy, action, reward, stacked_states, done)
+            action = agent.choose_action(state)
+            next_obs, reward, done, _ = env.step(action)
+            next_state = make_state(state, next_obs, False)
+            reward = sign(reward)
+            agent.store(state, action, reward, next_state, done)
             episode_reward += reward
 
-            # env.render()
-            # time.sleep(0.005)
             if step % params["train_period"] == 0:
                 beta = min(1.0, params["beta"] + step * (1.0 - params["beta"]) / params["final_annealing_beta_steps"])
                 loss += agent.train(beta)
-            agent.soft_update_of_target_network()
-            # if step % 5000:
-            #     agent.hard_update_of_target_network()
+            agent.soft_update_of_target_network(params["tau"])
 
+            state = next_state
             if done:
                 logger.off()
                 logger.log(episode, episode_reward, loss, step, beta)
 
                 episode += 1
-                state = env.reset()
-                stacked_frames = stack_states(stacked_states, state, True)
+                obs = env.reset()
+                state = make_state(state, obs, True)
                 episode_reward = 0
                 episode_loss = 0
                 logger.on()

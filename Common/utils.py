@@ -7,178 +7,136 @@ def rgb2gray(img):
     return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
 
-def preprocessing(img):
+def preprocessing(img, size=(84, 84)):
     img = rgb2gray(img)  # / 255.0 -> Do it later in order to open up more RAM !!!!
-    img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_AREA)
+    img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
     return img
 
 
-def stack_states(stacked_frames, state, is_new_episode):
+def make_state(stacked_frames, state, is_new_episode):
     frame = preprocessing(state)
 
     if is_new_episode:
-        stacked_frames = np.stack([frame for _ in range(4)], axis=2)
+        stacked_frames = np.stack([frame for _ in range(4)], axis=0)
     else:
-        stacked_frames = stacked_frames[..., 1:]
-        stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=2)], axis=2)
+        stacked_frames = stacked_frames[1:, ...]
+        stacked_frames = np.concatenate([stacked_frames, np.expand_dims(frame, axis=0)], axis=0)
     return stacked_frames
 
 
-def make_atari(env_id):
+def make_atari(env_id, seed):
     main_env = gym.make(env_id)
     assert 'NoFrameskip' in main_env.spec.id
     env = NoopResetEnv(main_env)
-    env = RepeatActionEnv(env)
+    env = MaxAndSkipEnv(env)
     env = EpisodicLifeEnv(env)
     if 'FIRE' in main_env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
+
+    np.random.seed(seed)
+    env.seed(seed)
+    env.observation_space.np_random.seed(seed)
+    env.action_space.np_random.seed(seed)
+
     return env
 
 
-class NoopResetEnv:
-    def __init__(self, env):
-        self.noop_max = 30
+class NoopResetEnv(gym.Wrapper):
+    def __init__(self, env, noop_max=30):
+        super(NoopResetEnv, self).__init__(env)
+        self.noop_max = noop_max
         self.noop_action = 0
-        self.env = env
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        self.ale = self.env.ale
-        assert self.env.unwrapped.get_action_meanings()[0] == 'NOOP'
-        self.observation_space = self.env.observation_space
+        assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
     def reset(self):
         self.env.reset()
+
         noops = np.random.randint(1, self.noop_max + 1)
-        assert noops > 0
-
-        state = None
+        obs = None
         for _ in range(noops):
-            state, _, done, _ = self.env.step(self.noop_action)
+            obs, _, done, _ = self.env.step(self.noop_action)
             if done:
-                state = self.env.reset()
+                obs = self.env.reset()
+        return obs
 
-        return state
-
-    def step(self, action):
-        return self.env.step(action)
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
+    # def get_rng_state(self):
+    #     env_rng = self.env.np_random.get_state()
+    #     env_obs_rng = self.env.observation_space.np_random.get_state()
+    #     env_ac_rng = self.env.action_space.np_random.get_state()
+    #     return np.random.get_state(), env_rng, env_obs_rng, env_ac_rng
+    #
+    # def set_rng_state(self, *state):
+    #     np.random.set_state(state[0])
+    #     self.env.np_random.set_state(state[1])
+    #     self.env.observation_space.np_random.set_state(state[2])
+    #     self.env.action_space.np_random.set_state(state[3])
 
 
-class RepeatActionEnv:
-    def __init__(self, env):
-        self.env = env
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        self.ale = self.env.ale
-        self.successive_frame = np.zeros((2,) + self.env.observation_space.shape, dtype=np.uint8)
+class MaxAndSkipEnv(gym.Wrapper):
+    def __init__(self, env, skip=4):
+        super(MaxAndSkipEnv, self).__init__(env)
 
-    def reset(self):
-        return self.env.reset()
+        self.obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
+        self.skip = skip
 
     def step(self, action):
-        reward, done = 0, False
-        for t in range(4):
-            state, r, done, info = self.env.step(action)
-            if t == 2:
-                self.successive_frame[0] = state
-            elif t == 3:
-                self.successive_frame[1] = state
+        reward = 0
+        done = None
+        for i in range(self.skip):
+            obs, r, done, info = self.env.step(action)
+
+            if i == self.skip - 2:
+                self.obs_buffer[0] = obs
+            if i == self.skip - 1:
+                self.obs_buffer[1] = obs
             reward += r
             if done:
                 break
 
-        state = self.successive_frame.max(axis=0)
-        return state, reward, done, info
+        max_frame = self.obs_buffer.max(axis=0)
 
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
+        return max_frame, reward, done, info
 
 
-class EpisodicLifeEnv:
+class EpisodicLifeEnv(gym.Wrapper):
     def __init__(self, env):
-        self.env = env
-        self.ale = self.env.ale
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        self.natural_done = True
+        super(EpisodicLifeEnv, self).__init__(env)
         self.lives = 0
+        self.real_done = True
 
     def step(self, action):
-        state, reward, done, info = self.env.step(action)
-        self.natural_done = done
+        obs, reward, done, info = self.env.step(action)
+        self.real_done = done
 
-        if self.lives > info["ale.lives"] > 0:
+        lives = info["ale.lives"]
+        if self.lives > lives > 0:
             done = True
-        self.lives = info["ale.lives"]
 
-        return state, reward, done, info
+        self.lives = lives
+        return obs, reward, done, info
 
     def reset(self):
-        if self.natural_done:
-            state = self.env.reset()
+
+        if self.real_done:
+            obs = self.env.reset()
         else:
-            state, _, _, _ = self.env.step(0)
-        self.lives = self.env.ale.lives()
-        return state
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
+            obs, _, _, _ = self.env.step(0)
+        self.lives = self.env.unwrapped.ale.lives()
+        return obs
 
 
-class FireResetEnv:
+class FireResetEnv(gym.Wrapper):
     def __init__(self, env):
-        self.env = env
-        self.observation_space = env.observation_space
-        self.ale = self.env.ale
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
+        super(FireResetEnv, self).__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
-    def step(self, action):
-        return self.env.step(action)
-
     def reset(self):
         self.env.reset()
-        state, _, done, _ = self.env.step(1)
+        obs, _, done, _ = self.env.step(1)
         if done:
             self.env.reset()
-        state, _, done, _ = self.env.step(2)
+        obs, _, done, _ = self.env.step(2)
         if done:
             self.env.reset()
-        return state
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
+        return obs
