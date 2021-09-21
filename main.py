@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 loss, g_norm = 0, 0
             agent.soft_update_of_target_network(params["tau"])
             episode_loss += loss
-            episode_g_norm = g_norm
+            episode_g_norm += g_norm
             state = next_state
             if done:
                 logger.off()

@@ -74,7 +74,7 @@ class Logger:
 
         if episode % (self.config["interval"] // 3) == 0:
             self.save_weights(episode, beta)
-            
+
         if episode % self.config["interval"] == 0:
             print("E:{}| "
                   "E_Reward:{:.2f}| "
@@ -106,7 +106,6 @@ class Logger:
         self.experiment.log_metric("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
         self.experiment.log_metric("Running Grad Norm", self.running_g_norm, episode)
         self.experiment.log_metric("Running Loss", self.running_loss, episode)
-
 
     def save_weights(self, episode, beta):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
