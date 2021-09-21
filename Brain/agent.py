@@ -57,7 +57,7 @@ class Agent:
         """Save I/O s to store them in RAM and not to push pressure on GPU RAM """
         assert state.dtype == "uint8"
         assert next_state.dtype == "uint8"
-        assert (reward, int)
+        assert isinstance(reward, int)
         assert isinstance(done, bool)
 
         self.n_step_buffer.append((state, np.uint8(action), np.int8(reward), next_state, done))
@@ -90,7 +90,7 @@ class Agent:
 
     def train(self, beta):
         if len(self.memory) < self.initial_mem_size_to_train:
-            return 0  # as no loss
+            return 0, 0  # as no loss
         batch, weights, indices = self.memory.sample(self.batch_size, beta)
         states, actions, rewards, next_states, dones = self.unpack_batch(batch)
         weights = from_numpy(weights).float().to(self.device)
@@ -109,7 +109,7 @@ class Agent:
             lower_bound[(upper_bound > 0) * (lower_bound == upper_bound)] -= 1
             upper_bound[(lower_bound < (self.n_atoms - 1)) * (lower_bound == upper_bound)] += 1
 
-            projected_dist = torch.zeros(q_next.size()).to(self.device)
+            projected_dist = torch.zeros(q_next.size(), dtype=torch.float64).to(self.device)
             projected_dist.view(-1).index_add_(0, (lower_bound + self.offset).view(-1),
                                                (q_next * (upper_bound.float() - b)).view(-1))
             projected_dist.view(-1).index_add_(0, (upper_bound + self.offset).view(-1),
@@ -123,12 +123,12 @@ class Agent:
 
         self.optimizer.zero_grad()
         dqn_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
         self.optimizer.step()
 
         self.online_model.reset()
         self.target_model.reset()
-        return dqn_loss.detach().cpu().numpy()
+        return dqn_loss.item(), grad_norm.item()
 
     def ready_to_play(self, state_dict):
         self.online_model.load_state_dict(state_dict)

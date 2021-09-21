@@ -18,6 +18,7 @@ class Logger:
         self.duration = 0
         self.running_reward = 0
         self.running_loss = 0
+        self.running_g_norm = 0
         self.max_episode_reward = -np.inf
         self.moving_avg_window = 10
         self.moving_weights = np.repeat(1.0, self.moving_avg_window) / self.moving_avg_window
@@ -48,15 +49,18 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, step, beta = args
+        episode, episode_reward, loss, g_norm, step, beta = args
 
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
 
         if self.running_reward == 0:
             self.running_reward = episode_reward
             self.running_loss = loss
+            self.running_g_norm = g_norm
+
         else:
             self.running_loss = 0.99 * self.running_loss + 0.01 * loss
+            self.running_g_norm = 0.99 * self.running_g_norm + 0.01 * g_norm
             self.running_reward = 0.99 * self.running_reward + 0.01 * episode_reward
 
         self.last_10_ep_rewards.append(int(episode_reward))
@@ -72,13 +76,13 @@ class Logger:
             self.save_weights(episode, beta)
             
         if episode % self.config["interval"] == 0:
-            print("EP:{}| "
-                  "EP_Reward:{:.2f}| "
-                  "EP_Running_Reward:{:.3f}| "
-                  "Running_loss:{:.3f}| "
-                  "EP_Duration:{:3.3f}| "
-                  "Memory_Length:{}| "
-                  "Mean_steps_time:{:.3f}| "
+            print("E:{}| "
+                  "E_Reward:{:.2f}| "
+                  "E_Running_Reward:{:.2f}| "
+                  "Running_loss:{:.2f}| "
+                  "E_Duration:{:.2f}| "
+                  "Mem_Len:{}| "
+                  "Mean_steps_time:{:.2f}| "
                   "{:.1f}/{:.1f} GB RAM| "
                   "Beta:{:.2f}| "
                   "Time:{}| "
@@ -97,10 +101,12 @@ class Logger:
                                    ))
 
         # with SummaryWriter("Logs/" + self.log_dir) as writer:
-        self.experiment.log_metric("Episode running reward", self.running_reward, episode)
+        self.experiment.log_metric("Running episode reward", self.running_reward, episode)
         self.experiment.log_metric("Max episode reward", self.max_episode_reward, episode)
         self.experiment.log_metric("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
-        self.experiment.log_metric("Loss", loss, episode)
+        self.experiment.log_metric("Running Grad Norm", self.running_g_norm, episode)
+        self.experiment.log_metric("Running Loss", self.running_loss, episode)
+
 
     def save_weights(self, episode, beta):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
