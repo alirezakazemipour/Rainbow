@@ -35,7 +35,6 @@ if __name__ == '__main__':
     params.update({"n_actions": test_env.action_space.n})
     del test_env
     params.update({"transition": namedtuple('transition', ('state', 'action', 'reward', 'next_state', 'done'))})
-    params.update({"max_episode_len": params["max_frame_per_episode"]})
 
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{params['n_actions']}")
@@ -79,24 +78,25 @@ if __name__ == '__main__':
             next_obs, reward, done, _ = env.step(action)
             next_state = make_state(state, next_obs, False)
             r = sign(reward)
+            # print(reward)
             agent.store(state, action, r, next_state, done)
             episode_reward += reward
 
             if step % params["train_period"] == 0:
                 beta = min(1.0, params["beta"] + step * (1.0 - params["beta"]) / params["final_annealing_beta_steps"])
                 loss, g_norm = agent.train(beta)
-                if agent.update_counter % params["hard_update_freq"] == 0:
-                    agent.hard_update_target_network()
-                    agent.update_counter = 0
             else:
                 loss, g_norm = 0, 0
             episode_loss += loss
             episode_g_norm += g_norm
 
-            # agent.soft_update_of_target_network(params["tau"])
+            if step % params["hard_update_freq"] == 0:
+                agent.hard_update_target_network()
+
+            # env.render()
             state = next_state
 
-            if episode_len == params["max_episode_len"]:
+            if episode_len == params["max_frames_per_episode"]:
                 done = True
 
             if done:
@@ -106,7 +106,8 @@ if __name__ == '__main__':
                            episode_loss / episode_len * params["train_period"],
                            episode_g_norm / episode_len * params["train_period"],
                            step,
-                           beta)
+                           beta,
+                           episode_len)
 
                 episode += 1
                 obs = env.reset()

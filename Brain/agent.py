@@ -1,7 +1,7 @@
 from torch import from_numpy
 import torch
 from .model import Model
-from torch.optim.adam import Adam
+from torch.optim import Adam
 import numpy as np
 from Memory import ReplayMemory
 from collections import deque
@@ -14,7 +14,6 @@ class Agent:
         self.state_shape = self.config["state_shape"]
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
-        self.update_counter = 0
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
         torch.manual_seed(self.config["seed"])
 
@@ -65,7 +64,7 @@ class Agent:
             return
 
         reward, next_state, done = self.get_n_step_returns()
-        state, action, _, _, _ = self.n_step_buffer.pop()
+        state, action, *_ = self.n_step_buffer.popleft()
 
         self.memory.add(state, np.uint8(action), reward, next_state, done)
 
@@ -105,7 +104,7 @@ class Agent:
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
             projected_atoms = rewards + (self.gamma ** self.n_step) * self.support * (~dones)
-            projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
+            projected_atoms = projected_atoms.clamp(min=self.v_min, max=self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
             lower_bound = b.floor().long()
@@ -120,7 +119,7 @@ class Agent:
                                                (q_next * (b - lower_bound.float())).view(-1))
 
         eval_dist = self.online_model(states)[range(self.batch_size), actions.squeeze().long()]
-        dqn_loss = - (projected_dist * torch.log(eval_dist)).sum(-1)
+        dqn_loss = -(projected_dist * torch.log(eval_dist + 1e-6)).sum(-1)
         td_error = dqn_loss.abs() + 1e-6
         self.memory.update_priorities(indices, td_error.detach().cpu().numpy())
         dqn_loss = (dqn_loss * weights).mean()
@@ -130,7 +129,6 @@ class Agent:
         grad_norm = torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
         self.optimizer.step()
 
-        self.update_counter += 1
         self.online_model.reset()
         self.target_model.reset()
         return dqn_loss.item(), grad_norm.item()

@@ -52,7 +52,7 @@ class Logger:
 
     def log(self, *args):
 
-        episode, episode_reward, loss, g_norm, step, beta = args
+        episode, episode_reward, loss, g_norm, step, beta, e_len = args
 
         self.max_episode_reward = max(self.max_episode_reward, episode_reward)
 
@@ -62,8 +62,8 @@ class Logger:
             self.running_g_norm = g_norm
 
         else:
-            self.running_loss = 0.99 * self.running_loss + 0.01 * loss
-            self.running_g_norm = 0.99 * self.running_g_norm + 0.01 * g_norm
+            self.running_loss = 0.9 * self.running_loss + 0.1 * loss
+            self.running_g_norm = 0.9 * self.running_g_norm + 0.1 * g_norm
             self.running_reward = 0.99 * self.running_reward + 0.01 * episode_reward
 
         self.last_10_ep_rewards.append(int(episode_reward))
@@ -108,7 +108,7 @@ class Logger:
                    "Max episode reward": self.max_episode_reward,
                    "Moving last 10 episode rewards": last_10_ep_rewards,
                    "Running Grad Norm": self.running_g_norm,
-                   " Running Loss": self.running_loss
+                   "Running Loss": self.running_loss
                    }
 
         if self.thread.is_alive():
