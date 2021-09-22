@@ -35,6 +35,7 @@ if __name__ == '__main__':
     params.update({"n_actions": test_env.action_space.n})
     del test_env
     params.update({"transition": namedtuple('transition', ('state', 'action', 'reward', 'next_state', 'done'))})
+    params.update({"max_episode_len": params["max_frame_per_episode"]})
 
     print(f"Environment: {params['env_name']}\n"
           f"Number of actions:{params['n_actions']}")
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     if not params["train_from_scratch"]:
         chekpoint = logger.load_weights()
         agent.online_model.load_state_dict(chekpoint["online_model_state_dict"])
-        agent.hard_update_of_target_network()
+        agent.hard_update_target_network()
         params.update({"beta": chekpoint["beta"]})
         min_episode = chekpoint["episode"]
 
@@ -84,12 +85,20 @@ if __name__ == '__main__':
             if step % params["train_period"] == 0:
                 beta = min(1.0, params["beta"] + step * (1.0 - params["beta"]) / params["final_annealing_beta_steps"])
                 loss, g_norm = agent.train(beta)
+                if agent.update_counter % params["hard_update_freq"] == 0:
+                    agent.hard_update_target_network()
+                    agent.update_counter = 0
             else:
                 loss, g_norm = 0, 0
-            agent.soft_update_of_target_network(params["tau"])
             episode_loss += loss
             episode_g_norm += g_norm
+
+            # agent.soft_update_of_target_network(params["tau"])
             state = next_state
+
+            if episode_len == params["max_episode_len"]:
+                done = True
+
             if done:
                 logger.off()
                 logger.log(episode,

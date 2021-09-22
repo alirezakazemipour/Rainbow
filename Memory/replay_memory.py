@@ -32,7 +32,7 @@ class ReplayMemory:
     def sample(self, batch_size, beta):
         indices = []
         weights = []
-        p_total = self.sum_tree.sum(0, len(self))  # TODO: this line changed.
+        p_total = self.sum_tree.sum(0, len(self))
         p_min = self.min_tree.min() / p_total
         max_weight = (p_min * len(self)) ** (-beta)
         segment = p_total / batch_size

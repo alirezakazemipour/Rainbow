@@ -6,7 +6,7 @@ def get_params():
         description="Variable parameters based on the configuration of the machine or user's choice")
     parser.add_argument("--algo", default="rainbow", type=str,
                         help="The algorithm which is used to train the agent.")
-    parser.add_argument("--mem_size", default=200000, type=int, help="The memory size.")
+    parser.add_argument("--mem_size", default=220000, type=int, help="The memory size.")
     parser.add_argument("--env_name", default="BreakoutNoFrameskip-v4", type=str, help="Name of the environment.")
     parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
@@ -40,7 +40,8 @@ def get_params():
                       "final_annealing_beta_steps": int(1e+6),
                       "initial_mem_size_to_train": 1000,
                       "seed": 123,
-                      "tau": 1.25e-4
+                      "hard_update_freq": 8000,
+                      "max_frame_per_episode": int(108e3)
                       }
     # endregion
     total_params = {**vars(parser_params), **default_params}

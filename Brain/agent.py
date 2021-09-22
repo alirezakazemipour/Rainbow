@@ -14,7 +14,7 @@ class Agent:
         self.state_shape = self.config["state_shape"]
         self.batch_size = self.config["batch_size"]
         self.gamma = self.config["gamma"]
-        self.tau = self.config["tau"]
+        self.update_counter = 0
         self.initial_mem_size_to_train = self.config["initial_mem_size_to_train"]
         torch.manual_seed(self.config["seed"])
 
@@ -42,7 +42,7 @@ class Agent:
 
         self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
         self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
-        self.hard_update_of_target_network()
+        self.hard_update_target_network()
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
 
@@ -60,23 +60,27 @@ class Agent:
         assert isinstance(reward, int)
         assert isinstance(done, bool)
 
-        self.n_step_buffer.append((state, np.uint8(action), np.int8(reward), next_state, done))
+        self.n_step_buffer.append((state, action, reward, next_state, done))
         if len(self.n_step_buffer) < self.n_step:
             return
 
         reward, next_state, done = self.get_n_step_returns()
         state, action, _, _, _ = self.n_step_buffer.pop()
 
-        self.memory.add(state, action, reward, next_state, done)
+        self.memory.add(state, np.uint8(action), reward, next_state, done)
 
-    def soft_update_of_target_network(self, tau):
+    def soft_update_target_network(self, tau):
         for target_param, local_param in zip(self.target_model.parameters(), self.online_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
-        self.target_model.eval()
+        # self.target_model.train()
+        for param in self.target_model.parameters():
+            param.requires_grad = False
 
-    def hard_update_of_target_network(self):
+    def hard_update_target_network(self):
         self.target_model.load_state_dict(self.online_model.state_dict())
-        self.target_model.eval()
+        # self.target_model.train()
+        for param in self.target_model.parameters():
+            param.requires_grad = False
 
     def unpack_batch(self, batch):
         batch = self.config["transition"](*zip(*batch))
@@ -100,7 +104,7 @@ class Agent:
             selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
 
-            projected_atoms = rewards + (self.gamma ** self.n_step) * self.support * (1 - dones.byte())
+            projected_atoms = rewards + (self.gamma ** self.n_step) * self.support * (~dones)
             projected_atoms = projected_atoms.clamp(self.v_min, self.v_max)
 
             b = (projected_atoms - self.v_min) / self.delta_z
@@ -126,6 +130,7 @@ class Agent:
         grad_norm = torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
         self.optimizer.step()
 
+        self.update_counter += 1
         self.online_model.reset()
         self.target_model.reset()
         return dqn_loss.item(), grad_norm.item()
@@ -138,7 +143,6 @@ class Agent:
         reward, next_state, done = self.n_step_buffer[-1][-3:]
 
         for transition in reversed(list(self.n_step_buffer)[:-1]):
-
             r, n_s, d = transition[-3:]
 
             reward = r + self.gamma * reward * (1 - d)
