@@ -6,6 +6,7 @@ import os
 import datetime
 import glob
 from collections import deque
+from threading import Thread
 
 
 class Logger:
@@ -29,6 +30,8 @@ class Logger:
             self.create_wights_folder(self.log_dir)
             self.experiment.log_parameters(self.config)
             # self.log_params()
+
+        self.thread = Thread()
 
     @staticmethod
     def create_wights_folder(dir):
@@ -77,12 +80,12 @@ class Logger:
 
         if episode % self.config["interval"] == 0:
             print("E:{}| "
-                  "E_Reward:{:.2f}| "
+                  "E_Reward:{:.1f}| "
                   "E_Running_Reward:{:.2f}| "
                   "Running_loss:{:.2f}| "
-                  "E_Duration:{:.2f}| "
+                  "E_Duration:{:.4f}| "
                   "Mem_Len:{}| "
-                  "Mean_steps_time:{:.2f}| "
+                  "Mean_steps_time:{:.4f}| "
                   "{:.1f}/{:.1f} GB RAM| "
                   "Beta:{:.2f}| "
                   "Time:{}| "
@@ -101,11 +104,21 @@ class Logger:
                                    ))
 
         # with SummaryWriter("Logs/" + self.log_dir) as writer:
-        self.experiment.log_metric("Running episode reward", self.running_reward, episode)
-        self.experiment.log_metric("Max episode reward", self.max_episode_reward, episode)
-        self.experiment.log_metric("Moving average reward of the last 10 episodes", last_10_ep_rewards, episode)
-        self.experiment.log_metric("Running Grad Norm", self.running_g_norm, episode)
-        self.experiment.log_metric("Running Loss", self.running_loss, episode)
+        metrics = {"Running episode reward": self.running_reward,
+                   "Max episode reward": self.max_episode_reward,
+                   "Moving last 10 episode rewards": last_10_ep_rewards,
+                   "Running Grad Norm": self.running_g_norm,
+                   " Running Loss": self.running_loss
+                   }
+
+        if self.thread.is_alive():
+            self.thread.join()
+        self.thread = Thread(target=self.log_metrics, args=(episode, metrics))
+        self.thread.start()
+
+    def log_metrics(self, episode, kwargs):
+        for k, v in kwargs.items():
+            self.experiment.log_metric(k, v, episode)
 
     def save_weights(self, episode, beta):
         torch.save({"online_model_state_dict": self.agent.online_model.state_dict(),
