@@ -6,7 +6,7 @@ def get_params():
         description="Variable parameters based on the configuration of the machine or user's choice")
     parser.add_argument("--algo", default="rainbow", type=str,
                         help="The algorithm which is used to train the agent.")
-    parser.add_argument("--mem_size", default=220000, type=int, help="The memory size.")
+    parser.add_argument("--mem_size", default=280000, type=int, help="The memory size.")
     parser.add_argument("--env_name", default="BoxingNoFrameskip-v4", type=str, help="Name of the environment.")
     parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"

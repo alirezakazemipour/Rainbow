@@ -2,7 +2,7 @@ from abc import ABC
 from torch import nn
 import torch
 import torch.nn.functional as F
-import numpy as np
+import math
 
 
 def conv2d_size_out(size, kernel_size=5, stride=2):
@@ -10,7 +10,7 @@ def conv2d_size_out(size, kernel_size=5, stride=2):
 
 
 class Model(nn.Module, ABC):
-    def __init__(self, state_shape, n_actions, n_atoms, support):
+    def __init__(self, state_shape, n_actions, n_atoms, support, device):
         super(Model, self).__init__()
         channel, width, height = state_shape
         self.n_actions = n_actions
@@ -29,15 +29,15 @@ class Model(nn.Module, ABC):
         convh = conv2d_size_out(convh, kernel_size=3, stride=1)
         linear_input_size = convw * convh * 64
 
-        self.adv_fc = NoisyLayer(linear_input_size, 512)
-        self.adv = NoisyLayer(512, self.n_actions * self.n_atoms)
+        self.adv_fc = NoisyLayer(linear_input_size, 512, device)
+        self.adv = NoisyLayer(512, self.n_actions * self.n_atoms, device)
 
-        self.value_fc = NoisyLayer(linear_input_size, 512)
-        self.value = NoisyLayer(512, self.n_atoms)
+        self.value_fc = NoisyLayer(linear_input_size, 512, device)
+        self.value = NoisyLayer(512, self.n_atoms, device)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
+                nn.init.orthogonal_(m.weight, gain=math.sqrt(2))
                 m.bias.data.zero_()
 
     def forward(self, inputs):
@@ -69,24 +69,25 @@ class Model(nn.Module, ABC):
 
 
 class NoisyLayer(nn.Module, ABC):
-    def __init__(self, n_inputs, n_outputs):
+    def __init__(self, n_inputs, n_outputs, device):
         super(NoisyLayer, self).__init__()
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
+        self.device = device
 
-        self.mu_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_inputs))
-        self.sigma_w = nn.Parameter(torch.FloatTensor(self.n_outputs, self.n_inputs))
+        self.mu_w = nn.Parameter(torch.Tensor(self.n_outputs, self.n_inputs))
+        self.sigma_w = nn.Parameter(torch.Tensor(self.n_outputs, self.n_inputs))
         self.register_buffer('weight_epsilon', torch.FloatTensor(self.n_outputs, self.n_inputs))
 
-        self.mu_b = nn.Parameter(torch.FloatTensor(self.n_outputs))
-        self.sigma_b = nn.Parameter(torch.FloatTensor(self.n_outputs))
+        self.mu_b = nn.Parameter(torch.Tensor(self.n_outputs))
+        self.sigma_b = nn.Parameter(torch.Tensor(self.n_outputs))
         self.register_buffer('bias_epsilon', torch.FloatTensor(self.n_outputs))
 
-        self.mu_w.data.uniform_(-1 / np.sqrt(self.n_inputs), 1 / np.sqrt(self.n_inputs))
-        self.sigma_w.data.fill_(0.5 / np.sqrt(self.n_inputs))
+        self.mu_w.data.uniform_(-1 / math.sqrt(self.n_inputs), 1 / math.sqrt(self.n_inputs))
+        self.sigma_w.data.fill_(0.1 / math.sqrt(self.n_inputs))
 
-        self.mu_b.data.uniform_(-1 / np.sqrt(self.n_inputs), 1 / np.sqrt(self.n_inputs))
-        self.sigma_b.data.fill_(0.5 / np.sqrt(self.n_outputs))
+        self.mu_b.data.uniform_(-1 / math.sqrt(self.n_inputs), 1 / math.sqrt(self.n_inputs))
+        self.sigma_b.data.fill_(0.1 / math.sqrt(self.n_outputs))
 
         self.reset_noise()
 
@@ -102,7 +103,7 @@ class NoisyLayer(nn.Module, ABC):
         return torch.sign(x) * torch.sqrt(torch.abs(x))
 
     def reset_noise(self):
-        epsilon_i = self.f(torch.randn(self.n_inputs))
-        epsilon_j = self.f(torch.randn(self.n_outputs))
+        epsilon_i = self.f(torch.randn(self.n_inputs, device=self.device))
+        epsilon_j = self.f(torch.randn(self.n_outputs, device=self.device))
         self.weight_epsilon.copy_(epsilon_j.ger(epsilon_i))
         self.bias_epsilon.copy_(epsilon_j)

@@ -39,8 +39,10 @@ class Agent:
         self.n_step = self.config["n_step"]
         self.n_step_buffer = deque(maxlen=self.n_step)
 
-        self.online_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
-        self.target_model = Model(self.state_shape, self.n_actions, self.n_atoms, self.support).to(self.device)
+        self.online_model = Model(self.state_shape, self.n_actions,
+                                  self.n_atoms, self.support, self.device).to(self.device)
+        self.target_model = Model(self.state_shape, self.n_actions,
+                                  self.n_atoms, self.support, self.device).to(self.device)
         self.hard_update_target_network()
 
         self.optimizer = Adam(self.online_model.parameters(), lr=self.config["lr"], eps=self.config["adam_eps"])
@@ -49,6 +51,7 @@ class Agent:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).byte().to(self.device)
         with torch.no_grad():
+            # self.online_model.reset()
             action = self.online_model.get_q_value(state).argmax(-1)
         return action.item()
 
@@ -99,6 +102,8 @@ class Agent:
         weights = from_numpy(weights).float().to(self.device)
 
         with torch.no_grad():
+            self.online_model.reset()
+            self.target_model.reset()
             q_eval_next = self.online_model.get_q_value(next_states)
             selected_actions = torch.argmax(q_eval_next, dim=-1)
             q_next = self.target_model(next_states)[range(self.batch_size), selected_actions]
@@ -129,8 +134,6 @@ class Agent:
         grad_norm = torch.nn.utils.clip_grad_norm_(self.online_model.parameters(), self.config["clip_grad_norm"])
         self.optimizer.step()
 
-        self.online_model.reset()
-        self.target_model.reset()
         return dqn_loss.item(), grad_norm.item()
 
     def ready_to_play(self, state_dict):

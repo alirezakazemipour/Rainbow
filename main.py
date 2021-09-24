@@ -5,14 +5,13 @@ from collections import namedtuple
 import time
 import numpy as np
 import os
-import math
 
 
 # region introduction to env.
 def intro_env():
     for e in range(5):
         test_env.reset()
-        for _ in range(test_env._max_episode_steps):
+        for _ in range(test_env.spec.max_episode_steps):
             a = test_env.env.action_space.sample()
             _, r, d, info = test_env.step(a)
             test_env.env.render()
@@ -37,7 +36,7 @@ if __name__ == '__main__':
     params.update({"transition": namedtuple('transition', ('state', 'action', 'reward', 'next_state', 'done'))})
 
     print(f"Environment: {params['env_name']}\n"
-          f"Number of actions:{params['n_actions']}")
+          f"Number of actions: {params['n_actions']}")
 
     if params["do_intro_env"]:
         intro_env()
