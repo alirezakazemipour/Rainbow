@@ -23,13 +23,13 @@ class Play:
             done = 0
             state = self.env.reset()
             episode_reward = 0
-            stacked_states = stack_states(stacked_states, state, True)
+            stacked_states = make_state(stacked_states, state, True)
 
             while not done:
                 stacked_frames_copy = stacked_states.copy()
                 action = self.agent.choose_action(stacked_frames_copy)
                 next_state, r, done, _ = self.env.step(action)
-                stacked_states = stack_states(stacked_states, next_state, False)
+                stacked_states = make_state(stacked_states, next_state, False)
                 self.env.render()
                 episode_reward += r
                 self.VideoWriter.write(cv2.cvtColor(next_state, cv2.COLOR_RGB2BGR))

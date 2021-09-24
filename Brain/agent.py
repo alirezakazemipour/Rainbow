@@ -51,7 +51,7 @@ class Agent:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).byte().to(self.device)
         with torch.no_grad():
-            # self.online_model.reset()
+            self.online_model.reset()
             action = self.online_model.get_q_value(state).argmax(-1)
         return action.item()
 

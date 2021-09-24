@@ -10,12 +10,13 @@ Implementation of the rainbow paper: Combining Improvements in Deep Reinforcemen
 Rainbow combined all these methods also with multi-step learning, and showed the final combination does much better than all other separate methods alone.
 
 ## Demo
-<p align="center">
-  <img src="Results/rainbow.gif" height=250>
-</p>
+Pong| Boxing
+:-----------------------:|:-----------------------:|
+![](Results/pong.gif)| ![](Results/boxing.gif)
 
 ## Results
 > x-axis: episode number.
+> environment: Pong
 
 Running reward| Mean reawrd of the last ten episodes
 :-----------------------:|:-----------------------:|
@@ -25,7 +26,7 @@ Running reward| Mean reawrd of the last ten episodes
 
 ## Environments tested
 - [x] PongNoFrameskip-v4
-- [ ] BreakoutNoFrameskip-v4
+- [x] BoxingNoFrameskip-v4
 - [ ] MsPacmanNoFrameskip-v4
 
 ## Table of hyper-parameters
