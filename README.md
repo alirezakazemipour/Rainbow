@@ -15,7 +15,7 @@ Pong| Boxing
 ![](Results/pong.gif)| ![](Results/boxing.gif)
 
 ## Results
-> x-axis: episode number.
+> x-axis: episode number.  
 > environment: Pong
 
 Running reward| Mean reawrd of the last ten episodes
