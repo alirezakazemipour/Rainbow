@@ -107,13 +107,13 @@ optional arguments:
                         continue previous tries.
   --do_intro_env        Only introduce the environment then close the program.
 ```
-- **In order to train the agent with default arguments , execute the following command and use `--do_train` flag to test the agent** (You may change the memory capacity and the environment based on your desire.):
+- **In order to train the agent with default arguments , execute the following command and use `--do_train` flag to train the agent** (You may change the memory capacity and the environment based on your desire.):
 ```shell
-python3 main.py --algo="rainbow" --mem_size=150000 --env_name="BreakoutNoFrameskip-v4" --interval=100 --train_from_scratch
+python3 main.py --do_train --algo="rainbow" --mem_size=150000 --env_name="BreakoutNoFrameskip-v4" --interval=100 --train_from_scratch
 ```
 - **If you want to keep training your previous run, execute the follwoing:**
 ```shell
-python3 main.py --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 
+python3 main.py --do_train --algo="rainbow" --mem_size=150000 --env_name="PongNoFrameskip-v4" --interval=100 
 ```
 ### Hardware requirements
 - **The whole training procedure was done on Google Colab and it took less than 15 hours of training, thus a machine with a similar configuration would be sufficient, but if you need a more powerful free online GPU provider, take a look at [paperspace.com](paperspace.com)**.
